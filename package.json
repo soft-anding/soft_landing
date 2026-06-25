@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "scrape:jerusalem": "tsx scripts/scrape-jerusalem-arnona.ts",
-    "scrape:telaviv": "tsx scripts/scrape-telaviv.ts"
+    "scrape:telaviv": "tsx scripts/scrape-telaviv.ts",
+    "scrape:kolzchut": "tsx scripts/scrape-kolzchut-moving-guide.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
     "@supabase/supabase-js": "^2.45.0",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.5",
