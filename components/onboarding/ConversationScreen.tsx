@@ -9,13 +9,13 @@ interface ConversationScreenProps {
 }
 
 export default function ConversationScreen({ question, onAnswer }: ConversationScreenProps) {
-  const [answer, setAnswer] = useState<unknown>(null);
+  const [answer, setAnswer] = useState<string>('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
 
   const handleSubmit = () => {
     if (question.type === 'checkbox') {
       onAnswer(selectedOptions);
-    } else if (answer !== null || !question.required) {
+    } else if (answer.trim() || !question.required) {
       onAnswer(answer);
     }
   };
@@ -30,7 +30,10 @@ export default function ConversationScreen({ question, onAnswer }: ConversationS
     if (question.type === 'checkbox') {
       return selectedOptions.length > 0;
     }
-    return answer !== null && answer !== '';
+    if (question.type === 'consent') {
+      return answer === 'true' || answer === true;
+    }
+    return answer.trim().length > 0;
   };
 
   return (
@@ -48,9 +51,7 @@ export default function ConversationScreen({ question, onAnswer }: ConversationS
               {question.options.map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => {
-                    setAnswer(option.value);
-                  }}
+                  onClick={() => setAnswer(option.value)}
                   className={`w-full p-md rounded-lg border-2 text-right font-medium transition-all ${
                     answer === option.value
                       ? 'border-primary-500 bg-primary-50 text-primary-700'
@@ -66,9 +67,14 @@ export default function ConversationScreen({ question, onAnswer }: ConversationS
           {question.type === 'text' && (
             <input
               type="text"
-              placeholder={question.text}
-              value={answer as string}
+              placeholder={question.placeholder || 'הקלד תשובה...'}
+              value={answer}
               onChange={(e) => setAnswer(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && isAnswered()) {
+                  handleSubmit();
+                }
+              }}
               className="w-full p-md rounded-lg border-2 border-surface-300 bg-white text-text-primary placeholder-text-secondary focus:border-primary-500 focus:outline-none text-right"
               dir="rtl"
             />
@@ -77,7 +83,7 @@ export default function ConversationScreen({ question, onAnswer }: ConversationS
           {question.type === 'date' && (
             <input
               type="date"
-              value={answer as string}
+              value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               className="w-full p-md rounded-lg border-2 border-surface-300 bg-white text-text-primary focus:border-primary-500 focus:outline-none"
             />
@@ -104,14 +110,14 @@ export default function ConversationScreen({ question, onAnswer }: ConversationS
 
           {question.type === 'consent' && (
             <button
-              onClick={() => setAnswer(!answer)}
+              onClick={() => setAnswer(answer === 'true' ? '' : 'true')}
               className={`w-full p-md rounded-lg border-2 text-right font-medium transition-all ${
-                answer
+                answer === 'true'
                   ? 'border-primary-500 bg-primary-50 text-primary-700'
                   : 'border-surface-300 bg-white text-text-primary hover:border-primary-300'
               }`}
             >
-              {answer ? '✓ הסכמתי' : 'אני מסכים/ה לבדיקת זכאות'}
+              {answer === 'true' ? '✓ הסכמתי' : 'אני מסכים/ה לבדיקת זכאות'}
             </button>
           )}
         </div>
