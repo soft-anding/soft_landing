@@ -60,43 +60,63 @@ function TasksSection({ tasks, onStatusChange, savingId }) {
   );
 }
 
-// ── Info card — lighter display for rights / benefits ─────────────────────────
+// ── Info card — collapsed accordion, title always visible ─────────────────────
 function InfoCard({ item }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasDetails = item.summary || item.discount_amount || item.source_url;
+
   return (
-    <div className="bg-white rounded-xl p-md border border-outline-variant/30 soft-shadow flex flex-col gap-sm text-right">
-      <div className="flex justify-between items-start gap-sm">
+    <div className="bg-white rounded-xl border border-outline-variant/30 soft-shadow text-right">
+      {/* Header — always visible */}
+      <div className="p-md flex justify-between items-start gap-sm">
+        <h4 className="font-headline-sm text-headline-sm text-on-surface flex-1">
+          {item.title_he || "ללא כותרת"}
+        </h4>
         {item.category_label && (
           <span className="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-primary-container/20 text-primary whitespace-nowrap shrink-0">
             {item.category_label}
           </span>
         )}
-        <h4 className="font-headline-sm text-headline-sm text-on-surface flex-1">
-          {item.title_he || "ללא כותרת"}
-        </h4>
       </div>
 
-      {item.summary && (
-        <p className="font-body-md text-body-md text-on-surface-variant line-clamp-4">
-          {item.summary}
-        </p>
-      )}
-
-      {item.discount_amount && (
-        <span className="font-label-md text-label-md text-primary">
-          הטבה: {item.discount_amount}
-        </span>
-      )}
-
-      {item.source_url && (
-        <a
-          href={item.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-label-md text-label-md text-primary flex items-center gap-xs hover:underline mt-auto"
+      {/* Accordion toggle */}
+      {hasDetails && (
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          className="flex items-center justify-between w-full px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
         >
-          <span className="material-symbols-outlined text-base">open_in_new</span>
-          למקור המידע
-        </a>
+          <span className="material-symbols-outlined text-sm">
+            {expanded ? "expand_less" : "expand_more"}
+          </span>
+          <span>{expanded ? "סגור" : "פרטים"}</span>
+        </button>
+      )}
+
+      {/* Accordion content */}
+      {expanded && (
+        <div className="border-t border-outline-variant/20 px-md pt-sm pb-md space-y-sm">
+          {item.summary && (
+            <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+              {item.summary}
+            </p>
+          )}
+          {item.discount_amount && (
+            <p className="font-label-md text-label-md text-primary">
+              הטבה: {item.discount_amount}
+            </p>
+          )}
+          {item.source_url && (
+            <a
+              href={item.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-label-md text-label-md text-primary inline-flex items-center gap-xs hover:underline"
+            >
+              <span className="material-symbols-outlined text-base">open_in_new</span>
+              למקור המידע
+            </a>
+          )}
+        </div>
       )}
     </div>
   );
@@ -170,7 +190,6 @@ export default function Dashboard() {
       .catch((e) => alive && setError(e.message))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
-  // Re-fetch rights if city becomes available after profile loads
   }, [destinationCity]);
 
   const handleStatusChange = async (item, status) => {
@@ -199,7 +218,6 @@ export default function Dashboard() {
       <AppHeader />
       <main className="pt-32 pb-xl px-gutter max-w-container-max mx-auto">
 
-        {/* Hero */}
         <section className="mb-lg text-right">
           <h1 className="font-headline-xl text-headline-xl text-primary mb-sm leading-tight">
             המסלול שלך למעבר רגוע
@@ -218,7 +236,6 @@ export default function Dashboard() {
 
         {!loading && !error && (
           <>
-            {/* ── Timeline ─────────────────────────────────────────────── */}
             <ProgressTimeline
               moveDate={moveDate}
               destinationCity={destinationCity}
@@ -227,7 +244,6 @@ export default function Dashboard() {
               byStatus={progress?.by_status ?? {}}
             />
 
-            {/* ── Moving tasks ─────────────────────────────────────────── */}
             <section className="mb-xl">
               <div className="flex justify-between items-center mb-md">
                 <span className="font-label-md text-label-md text-on-surface-variant">
@@ -244,7 +260,6 @@ export default function Dashboard() {
               />
             </section>
 
-            {/* ── Additional information ───────────────────────────────── */}
             <section className="mb-xl">
               <div className="flex justify-between items-center mb-md">
                 <span className="font-label-md text-label-md text-on-surface-variant">
@@ -261,7 +276,6 @@ export default function Dashboard() {
               />
             </section>
 
-            {/* ── RAG ask box ──────────────────────────────────────────── */}
             <AskBox
               profile={{}}
               seedQuery="מהן הזכויות וההנחות הרלוונטיות לי כמי שעובר/ת דירה?"
