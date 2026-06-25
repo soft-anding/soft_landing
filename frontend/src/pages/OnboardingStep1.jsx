@@ -46,6 +46,20 @@ export default function OnboardingStep1() {
         ספרו לנו על המעבר
       </h2>
 
+      {/* Full name */}
+      <div className={field}>
+        <label className={label} htmlFor="full_name">
+          שם מלא
+        </label>
+        <input
+          id="full_name"
+          type="text"
+          className={select}
+          value={form.full_name}
+          onChange={(e) => set("full_name", e.target.value)}
+        />
+      </div>
+
       {/* Origin city */}
       <div className={field}>
         <label className={label} htmlFor="origin_city">

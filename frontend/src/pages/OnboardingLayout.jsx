@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import Spinner from "../components/Spinner";
 
 export const EMPTY_FORM = {
+  full_name:            "",
   origin_city:          "",
   destination_city:     "",
   move_date:            "",

@@ -41,7 +41,7 @@ function TasksSection({ tasks, onStatusChange, savingId }) {
             <span className="w-1 h-5 bg-primary rounded-full inline-block" />
             {g.label}
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start">
             {g.items.map((item) => {
               const id = `${item.item_type}:${item.item_id}`;
               return (
@@ -83,12 +83,12 @@ function InfoCard({ item }) {
       {hasDetails && (
         <button
           onClick={() => setExpanded((e) => !e)}
-          className="flex items-center justify-between w-full px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
+          className="flex items-center gap-xs w-full px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
         >
+          <span>{expanded ? "סגור" : "פרטים"}</span>
           <span className="material-symbols-outlined text-sm">
             {expanded ? "expand_less" : "expand_more"}
           </span>
-          <span>{expanded ? "סגור" : "פרטים"}</span>
         </button>
       )}
 
@@ -149,7 +149,7 @@ function InfoSection({ items, interestCategories, destinationCity }) {
           {interestCategories && !interestCategories.includes("all") && " · לפי הנושאים שבחרת"}
         </p>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start">
         {filtered.map((item) => (
           <InfoCard key={`${item.item_type}:${item.item_id}`} item={item} />
         ))}
@@ -221,10 +221,10 @@ export default function Dashboard() {
 
         <section className="mb-lg text-right">
           <h1 className="font-headline-xl text-headline-xl text-primary mb-sm leading-tight">
-            המסלול שלך למעבר רגוע
+            מלווים אותך שלב אחר שלב עד שמרגישים בבית
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
-            המשאית כבר על הדרך — הנה מה שצריך לעשות ומתי.
+            כל המשימות והמידע למעבר דירה במקום אחד
           </p>
         </section>
 
@@ -264,17 +264,17 @@ export default function Dashboard() {
             <section className="mb-xl">
               <button
                 onClick={() => setShowInfo((v) => !v)}
-                className="w-full flex justify-between items-center mb-md group"
+                className="w-full text-right mb-md group"
               >
+                <h2 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">
+                  מידע נוסף
+                </h2>
                 <span className="flex items-center gap-sm text-on-surface-variant font-label-md text-label-md group-hover:text-primary transition-colors">
                   <span className="material-symbols-outlined text-base">
                     {showInfo ? "expand_less" : "expand_more"}
                   </span>
                   {showInfo ? "סגור" : "זכויות והטבות לפי הפרופיל שלך"}
                 </span>
-                <h2 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">
-                  מידע נוסף
-                </h2>
               </button>
 
               {showInfo && (

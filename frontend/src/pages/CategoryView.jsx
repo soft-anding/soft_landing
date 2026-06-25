@@ -79,7 +79,7 @@ export default function CategoryView() {
           <p className="text-on-surface-variant">אין פריטים בקטגוריה זו.</p>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-md items-start">
           {items.map((item) => (
             <TaskCard
               key={`${item.item_type}:${item.item_id}`}

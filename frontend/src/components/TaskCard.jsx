@@ -46,29 +46,42 @@ export default function TaskCard({ item, onStatusChange, saving }) {
           </h3>
         </div>
 
-        {/* Status cycling pill — click to advance through the 3 main states */}
-        <button
-          onClick={() => onStatusChange(item, nextInCycle(item.status))}
-          disabled={saving}
-          title={`סטטוס: ${item.status} — לחץ לשינוי`}
-          className={`
-            shrink-0 flex items-center gap-xs
-            px-3 py-1.5 rounded-full border
-            font-label-sm text-label-sm
-            transition-colors duration-150
-            hover:opacity-75 active:scale-95
-            disabled:opacity-40 disabled:cursor-not-allowed
-            ${statusStyle(item.status)}
-          `}
-        >
-          <span
-            className="material-symbols-outlined text-base"
-            style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
+        {/* Collapsed: quick-cycle pill. Expanded: full 7-status dropdown. */}
+        {expanded ? (
+          <select
+            value={item.status}
+            disabled={saving}
+            onChange={(e) => onStatusChange(item, e.target.value)}
+            className={`shrink-0 px-3 py-1.5 rounded-full border font-label-sm text-label-sm bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 ${statusStyle(item.status)}`}
           >
-            {STATUS_ICON[item.status] || "radio_button_unchecked"}
-          </span>
-          {saving ? "…" : item.status}
-        </button>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        ) : (
+          <button
+            onClick={() => onStatusChange(item, nextInCycle(item.status))}
+            disabled={saving}
+            title={`סטטוס: ${item.status} — לחץ לשינוי`}
+            className={`
+              shrink-0 flex items-center gap-xs
+              px-3 py-1.5 rounded-full border
+              font-label-sm text-label-sm
+              transition-colors duration-150
+              hover:opacity-75 active:scale-95
+              disabled:opacity-40 disabled:cursor-not-allowed
+              ${statusStyle(item.status)}
+            `}
+          >
+            <span
+              className="material-symbols-outlined text-base"
+              style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
+            >
+              {STATUS_ICON[item.status] || "radio_button_unchecked"}
+            </span>
+            {saving ? "…" : item.status}
+          </button>
+        )}
       </div>
 
       {/* ── Accordion toggle ──────────────────────────────────────────── */}
@@ -131,8 +144,8 @@ export default function TaskCard({ item, onStatusChange, saving }) {
             </div>
           )}
 
-          {/* Footer: full status dropdown + detail page link */}
-          <div className="flex items-center justify-between gap-sm pt-sm border-t border-outline-variant/20">
+          {/* Footer: detail page link (status dropdown now lives in the header) */}
+          <div className="flex items-center pt-sm border-t border-outline-variant/20">
             <button
               onClick={() => navigate(`/item/${item.item_type}/${item.item_id}`)}
               className="font-label-sm text-label-sm text-primary inline-flex items-center gap-xs hover:underline"
@@ -140,18 +153,6 @@ export default function TaskCard({ item, onStatusChange, saving }) {
               <span className="material-symbols-outlined text-base">arrow_back</span>
               עמוד מלא
             </button>
-
-            {/* Full 7-status dropdown for edge statuses not in the cycle */}
-            <select
-              value={item.status}
-              disabled={saving}
-              onChange={(e) => onStatusChange(item, e.target.value)}
-              className="border border-outline-variant/50 rounded bg-white py-1 font-label-sm text-label-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
           </div>
         </div>
       )}

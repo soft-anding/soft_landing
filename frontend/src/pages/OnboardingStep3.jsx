@@ -113,6 +113,7 @@ export default function OnboardingStep3() {
 
     const row = {
       id:                  user.id,
+      full_name:           form.full_name          || null,
       origin_city:         form.origin_city       || null,
       destination_city:    form.destination_city  || null,
       move_date:           form.move_date          || null,
