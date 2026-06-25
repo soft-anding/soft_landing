@@ -41,10 +41,11 @@ const realApi = {
   me: () => request("/me"),
   statuses: () => request("/statuses"),
   categories: () => request("/categories"),
-  items: ({ category, type } = {}) => {
+  items: ({ category, type, city } = {}) => {
     const qs = new URLSearchParams();
     if (category) qs.set("category", category);
     if (type) qs.set("type", type);
+    if (city) qs.set("city", city);
     const q = qs.toString();
     return request(`/items${q ? `?${q}` : ""}`);
   },

@@ -61,17 +61,47 @@ def _fetch_table(table: str, columns: str) -> list[dict]:
     return query.execute().data or []
 
 
-def fetch_catalog() -> list[dict]:
-    """All catalog items (tasks + rights), normalized, without user status."""
+def _resolve_city_id(city_slug: str) -> int | None:
+    """Map a user_profiles city slug (e.g. 'tel_aviv') to the cities.id.
+
+    The cities table uses hyphens ('tel-aviv') while user_profiles uses
+    underscores ('tel_aviv'), so we normalise before comparing.
+    """
+    sb = get_supabase()
+    rows = sb.table("cities").select("id,slug").execute().data or []
+    normalised = city_slug.replace("_", "-").lower()
+    for row in rows:
+        if row["slug"].lower() == normalised or row["slug"].lower() == city_slug.lower():
+            return row["id"]
+    return None
+
+
+def _fetch_rights_items(city_slug: str | None = None) -> list[dict]:
+    sb = get_supabase()
+    query = sb.table("rights_items").select(
+        "id,title,title_he,description,eligibility_conditions,required_documents,"
+        "discount_amount,deadlines,category,source_url,city_id"
+    )
+    if not settings.show_unverified:
+        query = query.eq("verified", True)
+    if city_slug:
+        city_id = _resolve_city_id(city_slug)
+        if city_id is not None:
+            query = query.eq("city_id", city_id)
+    return query.execute().data or []
+
+
+def fetch_catalog(city_slug: str | None = None) -> list[dict]:
+    """All catalog items (tasks + rights), normalized, without user status.
+
+    moving_tasks are city-agnostic and always included.
+    rights_items are filtered to city_slug when provided.
+    """
     tasks = _fetch_table(
         "moving_tasks",
         "id,title,title_he,summary,action_steps,related_links,category,source_url",
     )
-    rights = _fetch_table(
-        "rights_items",
-        "id,title,title_he,description,eligibility_conditions,required_documents,"
-        "discount_amount,deadlines,category,source_url",
-    )
+    rights = _fetch_rights_items(city_slug=city_slug)
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
 
 
@@ -93,8 +123,9 @@ def fetch_items_with_status(
     user_id: str,
     category: str | None = None,
     item_type: str | None = None,
+    city_slug: str | None = None,
 ) -> list[dict]:
-    catalog = fetch_catalog()
+    catalog = fetch_catalog(city_slug=city_slug)
     status_map = fetch_user_status_map(user_id)
     items: list[dict] = []
     for item in catalog:

@@ -3,28 +3,33 @@ import { useNavigate, useParams } from "react-router-dom";
 import AppHeader from "../components/AppHeader";
 import Spinner from "../components/Spinner";
 import TaskCard from "../components/TaskCard";
+import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
 
 export default function CategoryView() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [savingId, setSavingId] = useState(null);
 
+  const destinationCity = userProfile?.destination_city ?? null;
+
   useEffect(() => {
     let alive = true;
     setLoading(true);
     api
-      .items({ category: slug })
+      .items({ category: slug, city: destinationCity })
       .then((data) => alive && setItems(data))
       .catch((e) => alive && setError(e.message))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-  }, [slug]);
+  // Re-fetch if the city resolved late (profile loaded after render)
+  }, [slug, destinationCity]);
 
   const handleStatusChange = async (item, status) => {
     const key = `${item.item_type}:${item.item_id}`;

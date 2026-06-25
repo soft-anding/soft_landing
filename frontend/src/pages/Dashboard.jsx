@@ -5,14 +5,22 @@ import AskBox from "../components/AskBox";
 import CategoryCard from "../components/CategoryCard";
 import ProgressTimeline from "../components/ProgressTimeline";
 import Spinner from "../components/Spinner";
+import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
+
+function filterCategories(categories, interestCategories) {
+  if (!interestCategories || interestCategories.includes("all")) return categories;
+  return categories.filter((c) => interestCategories.includes(c.slug));
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(null);
+  const { userProfile } = useAuth();
+
+  const [progress, setProgress]     = useState(null);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -24,10 +32,14 @@ export default function Dashboard() {
       })
       .catch((e) => alive && setError(e.message))
       .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
+
+  const moveDate        = userProfile?.move_date        ?? null;
+  const destinationCity = userProfile?.destination_city ?? null;
+  const interestCats    = userProfile?.interest_categories ?? null;
+
+  const visibleCategories = filterCategories(categories, interestCats);
 
   return (
     <div className="min-h-screen">
@@ -49,22 +61,36 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && !error && progress && (
+        {!loading && !error && (
           <>
-            <ProgressTimeline pct={progress.completed_pct} byStatus={progress.by_status} />
+            <ProgressTimeline
+              moveDate={moveDate}
+              destinationCity={destinationCity}
+              completed={progress?.completed ?? 0}
+              total={progress?.total ?? 0}
+              byStatus={progress?.by_status ?? {}}
+            />
 
             <div className="flex justify-between items-center mb-md">
               <h2 className="font-headline-md text-headline-md text-on-surface">קטגוריות</h2>
-              <span className="text-label-md text-on-surface-variant">
-                {progress.completed} מתוך {progress.total} הושלמו
-              </span>
+              {progress && (
+                <span className="text-label-md text-on-surface-variant">
+                  {progress.completed} מתוך {progress.total} הושלמו
+                </span>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
-              {categories.map((c) => (
-                <CategoryCard key={c.slug} category={c} />
-              ))}
-            </div>
+            {visibleCategories.length === 0 ? (
+              <p className="text-on-surface-variant font-body-md">
+                לא נמצאו קטגוריות מתאימות להעדפות שלך.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+                {visibleCategories.map((c) => (
+                  <CategoryCard key={c.slug} category={c} />
+                ))}
+              </div>
+            )}
 
             <AskBox
               profile={{}}
@@ -75,10 +101,10 @@ export default function Dashboard() {
       </main>
 
       <button
-        onClick={() => navigate("/category/" + (categories[0]?.slug || ""))}
+        onClick={() => navigate("/category/" + (visibleCategories[0]?.slug || ""))}
         className="fixed bottom-gutter left-gutter w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform z-40"
         aria-label="עבור למשימות"
-        disabled={!categories.length}
+        disabled={!visibleCategories.length}
       >
         <span className="material-symbols-outlined text-3xl">checklist</span>
       </button>
