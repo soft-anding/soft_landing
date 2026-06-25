@@ -168,6 +168,7 @@ export default function Dashboard() {
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState(null);
   const [savingId,   setSavingId]   = useState(null);
+  const [showInfo,   setShowInfo]   = useState(false);
 
   const moveDate        = userProfile?.move_date        ?? null;
   const destinationCity = userProfile?.destination_city ?? null;
@@ -261,19 +262,28 @@ export default function Dashboard() {
             </section>
 
             <section className="mb-xl">
-              <div className="flex justify-between items-center mb-md">
-                <span className="font-label-md text-label-md text-on-surface-variant">
-                  זכויות והטבות לפי הפרופיל שלך
+              <button
+                onClick={() => setShowInfo((v) => !v)}
+                className="w-full flex justify-between items-center mb-md group"
+              >
+                <span className="flex items-center gap-sm text-on-surface-variant font-label-md text-label-md group-hover:text-primary transition-colors">
+                  <span className="material-symbols-outlined text-base">
+                    {showInfo ? "expand_less" : "expand_more"}
+                  </span>
+                  {showInfo ? "סגור" : "זכויות והטבות לפי הפרופיל שלך"}
                 </span>
-                <h2 className="font-headline-md text-headline-md text-on-surface">
+                <h2 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">
                   מידע נוסף
                 </h2>
-              </div>
-              <InfoSection
-                items={rights}
-                interestCategories={interestCats}
-                destinationCity={destinationCity}
-              />
+              </button>
+
+              {showInfo && (
+                <InfoSection
+                  items={rights}
+                  interestCategories={interestCats}
+                  destinationCity={destinationCity}
+                />
+              )}
             </section>
 
             <AskBox
