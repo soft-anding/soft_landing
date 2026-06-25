@@ -1,17 +1,17 @@
-"""Authentication: verify the Supabase access token (JWT) on each request.
+"""Authentication: verify the Supabase access token on each request.
 
 The frontend signs in with Supabase (Google OAuth) and sends the resulting
-access token as `Authorization: Bearer <token>`. Supabase signs these tokens
-with the project's JWT secret (HS256), so we can verify them locally without a
-network round-trip.
+access token as `Authorization: Bearer <token>`. We verify it by asking
+Supabase Auth directly (GET /auth/v1/user) rather than checking the JWT
+signature locally, so no JWT secret needs to be configured here.
 """
 from dataclasses import dataclass
 
-import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from gotrue.errors import AuthApiError
 
-from .config import settings
+from .supabase_client import get_supabase_anon
 
 _bearer = HTTPBearer(auto_error=True)
 
@@ -25,29 +25,19 @@ class CurrentUser:
 def get_current_user(
     creds: HTTPAuthorizationCredentials = Depends(_bearer),
 ) -> CurrentUser:
-    if not settings.supabase_jwt_secret:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Server missing SUPABASE_JWT_SECRET.",
-        )
     token = creds.credentials
     try:
-        payload = jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-    except jwt.PyJWTError as exc:
+        response = get_supabase_anon().auth.get_user(token)
+    except AuthApiError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid or expired token: {exc}",
         ) from exc
 
-    user_id = payload.get("sub")
-    if not user_id:
+    user = response.user
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has no subject (sub).",
+            detail="Invalid or expired token.",
         )
-    return CurrentUser(id=user_id, email=payload.get("email"))
+    return CurrentUser(id=user.id, email=user.email)

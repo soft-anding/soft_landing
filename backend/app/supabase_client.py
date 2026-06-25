@@ -18,3 +18,13 @@ def get_supabase() -> Client:
             "SUPABASE_URL and SUPABASE_SERVICE_KEY must be set (see backend/.env.example)."
         )
     return create_client(settings.supabase_url, settings.supabase_service_key)
+
+
+@lru_cache
+def get_supabase_anon() -> Client:
+    """Client used only to verify user access tokens against Supabase Auth."""
+    if not settings.supabase_url or not settings.supabase_anon_key:
+        raise RuntimeError(
+            "SUPABASE_URL and SUPABASE_ANON_KEY must be set (see backend/.env.example)."
+        )
+    return create_client(settings.supabase_url, settings.supabase_anon_key)

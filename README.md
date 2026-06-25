@@ -61,7 +61,6 @@ This cannot be done from code:
 | ---------------------- | ---------------------------------------------------------- |
 | `SUPABASE_URL`         | Project Settings → API                                     |
 | `SUPABASE_SERVICE_KEY` | Project Settings → API → `service_role` (SECRET)           |
-| `SUPABASE_JWT_SECRET`  | Project Settings → API → JWT Settings → JWT Secret         |
 | `SUPABASE_ANON_KEY`    | Project Settings → API → anon/public                       |
 | `FRONTEND_ORIGIN`      | Allowed CORS origins, comma-separated                      |
 | `SHOW_UNVERIFIED`      | `true` to show unverified seed data (default)              |

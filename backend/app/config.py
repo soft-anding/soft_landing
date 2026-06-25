@@ -6,8 +6,7 @@ class Settings(BaseSettings):
     # Supabase project connection
     supabase_url: str = ""
     supabase_service_key: str = ""   # service-role key (server-side only, never exposed)
-    supabase_jwt_secret: str = ""    # used to verify the Supabase access token (HS256)
-    supabase_anon_key: str = ""      # only echoed to clients if they need it
+    supabase_anon_key: str = ""      # used to verify user access tokens against Supabase Auth
 
     # CORS: comma-separated list of allowed origins (Vite dev + the deployed URL)
     frontend_origin: str = "http://localhost:5173"
