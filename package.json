@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "scrape:jerusalem": "tsx scripts/scrape-jerusalem-arnona.ts"
+    "scrape:jerusalem": "tsx scripts/scrape-jerusalem-arnona.ts",
+    "scrape:telaviv": "tsx scripts/scrape-telaviv.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
