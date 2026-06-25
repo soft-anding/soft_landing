@@ -1,0 +1,26 @@
+"""Application settings loaded from environment variables / .env file."""
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    # Supabase project connection
+    supabase_url: str = ""
+    supabase_service_key: str = ""   # service-role key (server-side only, never exposed)
+    supabase_jwt_secret: str = ""    # used to verify the Supabase access token (HS256)
+    supabase_anon_key: str = ""      # only echoed to clients if they need it
+
+    # CORS: comma-separated list of allowed origins (Vite dev + the deployed URL)
+    frontend_origin: str = "http://localhost:5173"
+
+    # When false, only items with verified = true are surfaced (matches the spec's
+    # "review then publish" workflow). Defaults to true so the MVP shows the seeded data.
+    show_unverified: bool = True
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [o.strip() for o in self.frontend_origin.split(",") if o.strip()]
+
+
+settings = Settings()

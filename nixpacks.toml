@@ -1,0 +1,16 @@
+# Railway / Nixpacks build for the single integrated service.
+# Builds the React frontend, installs the Python backend, then serves both
+# from FastAPI (the backend mounts frontend/dist at "/").
+providers = ["node", "python"]
+
+[phases.install]
+cmds = [
+  "cd frontend && npm ci",
+  "python -m pip install -r backend/requirements.txt",
+]
+
+[phases.build]
+cmds = ["cd frontend && npm run build"]
+
+[start]
+cmd = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"

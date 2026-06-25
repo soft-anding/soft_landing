@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Global styles copied from the Stitch "Soft Landing" screens ── */
+body {
+  background-color: #fff8ef; /* warm brand base */
+  font-family: "Assistant", "Noto Sans Hebrew", sans-serif;
+  overflow-x: hidden;
+  color: #0b1d29;
+}
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.soft-shadow {
+  box-shadow: 0 20px 40px -10px rgba(143, 185, 168, 0.15);
+}
+
+/* Login: floating decorative blobs */
+.floating-element {
+  animation: floating 6s ease-in-out infinite;
+}
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Pill input focus glow */
+.input-pill:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(143, 185, 168, 0.2);
+  border-color: #8fb9a8;
+}
+
+/* Dashboard: gentle truck bob along the timeline */
+.truck-animation {
+  animation: drive 10s linear infinite;
+}
+@keyframes drive {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-10px); }
+  100% { transform: translateX(0); }
+}
