@@ -5,7 +5,10 @@ import CategoryView from "./pages/CategoryView";
 import Dashboard from "./pages/Dashboard";
 import ItemDetail from "./pages/ItemDetail";
 import Login from "./pages/Login";
-import Onboarding from "./pages/Onboarding";
+import OnboardingLayout from "./pages/OnboardingLayout";
+import OnboardingStep1 from "./pages/OnboardingStep1";
+import OnboardingStep2 from "./pages/OnboardingStep2";
+import OnboardingStep3 from "./pages/OnboardingStep3";
 
 /**
  * Guards /dashboard and its nested routes.
@@ -50,19 +53,13 @@ export default function App() {
       {/* Legacy /login → same landing page */}
       <Route path="/login" element={<Navigate to="/" replace />} />
 
-      {/* Onboarding — accessible only to authenticated users without a profile */}
-      <Route
-        path="/onboarding"
-        element={
-          loading
-            ? <Spinner full />
-            : !session
-              ? <Navigate to="/" replace />
-              : userProfile
-                ? <Navigate to="/dashboard" replace />
-                : <Onboarding />
-        }
-      />
+      {/* Onboarding — 3-step flow, guard + shared state in OnboardingLayout */}
+      <Route path="/onboarding" element={<OnboardingLayout />}>
+        <Route index element={<Navigate to="step-1" replace />} />
+        <Route path="step-1" element={<OnboardingStep1 />} />
+        <Route path="step-2" element={<OnboardingStep2 />} />
+        <Route path="step-3" element={<OnboardingStep3 />} />
+      </Route>
 
       {/* Protected app — session + profile required */}
       <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
