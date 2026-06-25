@@ -51,6 +51,9 @@ const realApi = {
   progress: () => request("/progress"),
   setStatus: (itemType, itemId, payload) =>
     request(`/items/${itemType}/${itemId}/status`, { method: "PUT", body: payload }),
+
+  ask: (payload) =>
+    request("/ask", { method: "POST", body: payload }),
 };
 
 // In demo mode, serve mock data with no backend (see demo.js / demoData.js).

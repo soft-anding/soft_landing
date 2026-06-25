@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppHeader from "../components/AppHeader";
+import AskBox from "../components/AskBox";
 import CategoryCard from "../components/CategoryCard";
 import ProgressTimeline from "../components/ProgressTimeline";
 import Spinner from "../components/Spinner";
@@ -64,6 +65,11 @@ export default function Dashboard() {
                 <CategoryCard key={c.slug} category={c} />
               ))}
             </div>
+
+            <AskBox
+              profile={{}}
+              seedQuery="מהן הזכויות וההנחות הרלוונטיות לי כמי שעובר/ת דירה?"
+            />
           </>
         )}
       </main>

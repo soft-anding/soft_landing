@@ -6,6 +6,8 @@
     "scrape:jerusalem": "tsx scripts/scrape-jerusalem-arnona.ts",
     "scrape:telaviv": "tsx scripts/scrape-telaviv.ts",
     "scrape:kolzchut": "tsx scripts/scrape-kolzchut-moving-guide.ts",
+    "clean:data": "tsx scripts/clean-rights-data.ts",
+    "embed:data": "tsx scripts/embed-rights-data.ts",
     "dev": "concurrently -n backend,frontend -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\"",
     "dev:backend": "cd backend && .venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8000",
     "dev:frontend": "npm run dev --prefix frontend"

@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from .auth import CurrentUser, get_current_user
 from .config import settings
 from .constants import STATUSES
-from .routers import catalog, health, tracking
+from .routers import ask, catalog, health, tracking
 
 app = FastAPI(title="Soft Landing Moving Assistant API", version="0.1.0")
 
@@ -28,6 +28,7 @@ api = APIRouter(prefix="/api")
 api.include_router(health.router)
 api.include_router(catalog.router)
 api.include_router(tracking.router)
+api.include_router(ask.router)
 
 
 @api.get("/statuses", tags=["meta"])
