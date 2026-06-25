@@ -11,9 +11,9 @@ export default function AppHeader() {
     <header className="fixed top-0 right-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm">
       <nav className="max-w-container-max mx-auto px-gutter py-sm flex flex-row-reverse justify-between items-center h-16">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")}
           className="flex items-center gap-base"
-          aria-label="דף הבית"
+          aria-label="לוח הבקרה"
         >
           <span className="w-9 h-9 bg-primary-container rounded-lg flex items-center justify-center text-on-primary soft-shadow">
             <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>

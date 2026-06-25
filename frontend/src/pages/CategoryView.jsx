@@ -54,7 +54,7 @@ export default function CategoryView() {
       <AppHeader />
       <main className="pt-32 pb-xl px-gutter max-w-container-max mx-auto">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")}
           className="mb-md text-primary font-label-md flex items-center gap-xs hover:underline"
         >
           <span className="material-symbols-outlined">arrow_forward</span>
