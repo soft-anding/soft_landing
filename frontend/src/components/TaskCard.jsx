@@ -75,13 +75,12 @@ export default function TaskCard({ item, onStatusChange, saving }) {
       {hasDetails && (
         <button
           onClick={() => setExpanded((e) => !e)}
-          className="flex items-center justify-between px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
+          className="flex items-center gap-xs px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
         >
-          {/* Arrow is on the left in RTL — matches reading direction */}
+          <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
           <span className="material-symbols-outlined text-sm">
             {expanded ? "expand_less" : "expand_more"}
           </span>
-          <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
         </button>
       )}
 

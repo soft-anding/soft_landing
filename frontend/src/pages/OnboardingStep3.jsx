@@ -162,7 +162,7 @@ export default function OnboardingStep3() {
       <div className={fieldCls}>
         <p className={labelCls}>האם אחד מאלה מתאים לכם?</p>
         <p className={hintCls}>
-          נשתמש בזה רק כדי לבדוק זכויות פוטנציאליות — לא ישותף מחוץ לאפליקציה.
+          נשתמש בזה רק כדי לבדוק זכויות פוטנציאליות (המידע חסוי ולא יישמר לאחר הבדיקה).
         </p>
         <div className="mt-sm border border-outline-variant/50 rounded p-sm space-y-xs">
           {ELIGIBILITY_OPTIONS.map((o) => (

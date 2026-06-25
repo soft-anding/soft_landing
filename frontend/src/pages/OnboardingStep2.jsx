@@ -113,19 +113,13 @@ export default function OnboardingStep2() {
           type="text"
           inputMode="numeric"
           maxLength={4}
-          placeholder="לדוגמה: 1992"
           className={`${inputCls} ${errors.birth_year ? "border-error focus:border-error" : ""}`}
           value={form.birth_year}
           onChange={(e) => set("birth_year", e.target.value.replace(/\D/g, "").slice(0, 4))}
           onBlur={handleBirthYearBlur}
-          dir="ltr"
+          dir="rtl"
         />
         {errors.birth_year && <p className={errCls}>{errors.birth_year}</p>}
-        {!errors.birth_year && (
-          <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
-            בין {MIN_YEAR} ל-{MAX_YEAR}
-          </p>
-        )}
       </div>
 
       {/* Marital status */}

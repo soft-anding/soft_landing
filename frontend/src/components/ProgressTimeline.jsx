@@ -63,11 +63,6 @@ export default function ProgressTimeline({
             className="absolute top-1/2 -translate-y-full transition-all duration-1000 ease-out"
             style={{ right: `calc(${clamped}% - 2rem)` }}
           >
-            {daysLeft !== null && daysLeft >= 0 && (
-              <div className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-primary text-on-primary text-xs font-bold px-1.5 py-px rounded-full shadow">
-                {daysLeft === 0 ? "היום!" : `${daysLeft}י`}
-              </div>
-            )}
             <div className="bg-white p-1 rounded-lg shadow-md border border-primary/20">
               <img
                 src="/track.png"

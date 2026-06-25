@@ -27,19 +27,20 @@ export function AuthProvider({ children }) {
     if (DEMO) return;
 
     let active = true;
+    let initialized = false;
 
     // Use onAuthStateChange as the single source of truth for session state.
     // INITIAL_SESSION fires immediately with the current session (null if logged out,
     // or the stored session if logged in). SIGNED_IN fires after OAuth redirects.
+    // Supabase also re-fires INITIAL_SESSION/TOKEN_REFRESHED whenever the tab regains
+    // focus — only show the full-page spinner for the very first check or a real
+    // sign-in/out transition, so returning to the tab doesn't remount the dashboard.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!active) return;
 
-        // While fetching the profile, keep the spinner visible so the router
-        // doesn't make a premature redirect based on stale state.
-        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-          setLoading(true);
-        }
+        const isTransition = !initialized || event === "SIGNED_IN" || event === "SIGNED_OUT";
+        if (isTransition) setLoading(true);
 
         setSession(newSession);
 
@@ -50,6 +51,7 @@ export function AuthProvider({ children }) {
           if (active) setUserProfile(false);
         }
 
+        initialized = true;
         if (active) setLoading(false);
       }
     );

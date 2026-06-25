@@ -246,13 +246,13 @@ export default function Dashboard() {
             />
 
             <section className="mb-xl">
-              <div className="flex justify-between items-center mb-md">
-                <span className="font-label-md text-label-md text-on-surface-variant">
-                  {progress ? `${progress.completed} מתוך ${progress.total} הושלמו` : ""}
-                </span>
+              <div className="mb-md">
                 <h2 className="font-headline-md text-headline-md text-on-surface">
                   משימות המעבר
                 </h2>
+                <span className="font-label-md text-label-md text-on-surface-variant">
+                  {progress ? `${progress.completed} מתוך ${progress.total} הושלמו` : ""}
+                </span>
               </div>
               <TasksSection
                 tasks={tasks}
