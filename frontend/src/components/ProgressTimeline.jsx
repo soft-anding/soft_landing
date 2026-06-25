@@ -151,7 +151,11 @@ export default function ProgressTimeline({
               <div className="bg-white p-2 rounded-lg shadow-md border border-primary/20">
                 <span
                   className="material-symbols-outlined text-primary text-4xl truck-animation"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
+                  style={{
+                    fontVariationSettings: "'FILL' 1",
+                    transform: "scaleX(-1)",
+                    display: "inline-block",
+                  }}
                 >
                   local_shipping
                 </span>

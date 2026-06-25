@@ -66,21 +66,27 @@ def _resolve_city_id(city_slug: str) -> int | None:
 
     The cities table uses hyphens ('tel-aviv') while user_profiles uses
     underscores ('tel_aviv'), so we normalise before comparing.
+    Returns None on any error so city filtering degrades gracefully.
     """
-    sb = get_supabase()
-    rows = sb.table("cities").select("id,slug").execute().data or []
-    normalised = city_slug.replace("_", "-").lower()
-    for row in rows:
-        if row["slug"].lower() == normalised or row["slug"].lower() == city_slug.lower():
-            return row["id"]
+    try:
+        sb = get_supabase()
+        rows = sb.table("cities").select("id,slug").execute().data or []
+        normalised = city_slug.replace("_", "-").lower()
+        for row in rows:
+            if row["slug"].lower() == normalised or row["slug"].lower() == city_slug.lower():
+                return row["id"]
+    except Exception:
+        pass
     return None
 
 
 def _fetch_rights_items(city_slug: str | None = None) -> list[dict]:
     sb = get_supabase()
+    # Do NOT add city_id to the SELECT — we only need it for filtering,
+    # and PostgREST lets you filter by a column without returning it.
     query = sb.table("rights_items").select(
         "id,title,title_he,description,eligibility_conditions,required_documents,"
-        "discount_amount,deadlines,category,source_url,city_id"
+        "discount_amount,deadlines,category,source_url"
     )
     if not settings.show_unverified:
         query = query.eq("verified", True)
