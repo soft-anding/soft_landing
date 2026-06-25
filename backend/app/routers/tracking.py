@@ -58,8 +58,9 @@ def set_status(
 @router.get("/progress", response_model=ProgressSummary)
 def progress(user: CurrentUser = Depends(get_current_user)) -> ProgressSummary:
     catalog = fetch_catalog()
-    total = len(catalog)
-    catalog_keys = {(i["item_type"], i["item_id"]) for i in catalog}
+    tasks_only = [i for i in catalog if i["item_type"] == "moving_task"]
+    total = len(tasks_only)
+    catalog_keys = {(i["item_type"], i["item_id"]) for i in tasks_only}
 
     status_map = fetch_user_status_map(user.id)
     by_status = {s: 0 for s in STATUSES}
