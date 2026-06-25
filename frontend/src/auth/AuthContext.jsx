@@ -12,7 +12,7 @@ const DEMO_PROFILE = { id: "demo-user" };
 async function loadProfile(userId) {
   const { data } = await supabase
     .from("user_profiles")
-    .select("id,move_date,destination_city,interest_categories")
+    .select("id,full_name,move_date,destination_city,interest_categories")
     .eq("id", userId)
     .maybeSingle();
   return data ?? false; // false = authenticated but no profile row (or table error)
@@ -33,15 +33,18 @@ export function AuthProvider({ children }) {
     // INITIAL_SESSION fires immediately with the current session (null if logged out,
     // or the stored session if logged in). SIGNED_IN fires after OAuth redirects.
     // Supabase also re-fires INITIAL_SESSION/TOKEN_REFRESHED whenever the tab regains
-    // focus — only show the full-page spinner for the very first check or a real
-    // sign-in/out transition, so returning to the tab doesn't remount the dashboard.
+    // focus. Those re-fires carry no information we don't already have (api.js reads
+    // the token straight from supabase.auth.getSession() on every call, not from this
+    // state), so once we've initialized, fully ignore anything that isn't a real
+    // sign-in/out — no state update, no profile refetch, no re-render at all.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!active) return;
 
-        const isTransition = !initialized || event === "SIGNED_IN" || event === "SIGNED_OUT";
-        if (isTransition) setLoading(true);
+        const isTransition = event === "SIGNED_IN" || event === "SIGNED_OUT";
+        if (initialized && !isTransition) return;
 
+        setLoading(true);
         setSession(newSession);
 
         if (newSession?.user) {

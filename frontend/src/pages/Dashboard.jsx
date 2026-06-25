@@ -10,6 +10,28 @@ import { api } from "../api";
 // ── Hebrew city labels ────────────────────────────────────────────────────────
 const CITY_LABELS = { jerusalem: "ירושלים", tel_aviv: "תל אביב" };
 
+// ── Session cache — so leaving the tab/page and coming back shows the data
+// instantly instead of re-running the loading spinner. A background fetch
+// still refreshes it on every mount, just without blocking the UI.
+const CACHE_PREFIX = "dashboard_cache:";
+
+function readCache(key) {
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(key, data) {
+  try {
+    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data));
+  } catch {
+    // Storage full/unavailable — caching is a nice-to-have, ignore.
+  }
+}
+
 // ── Group a flat item list by category ───────────────────────────────────────
 function groupByCategory(items) {
   const map = {};
@@ -162,21 +184,27 @@ function InfoSection({ items, interestCategories, destinationCity }) {
 export default function Dashboard() {
   const { userProfile } = useAuth();
 
-  const [progress,   setProgress]   = useState(null);
-  const [tasks,      setTasks]      = useState([]);
-  const [rights,     setRights]     = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState(null);
-  const [savingId,   setSavingId]   = useState(null);
-  const [showInfo,   setShowInfo]   = useState(false);
-
+  const fullName         = userProfile?.full_name        ?? null;
   const moveDate        = userProfile?.move_date        ?? null;
   const destinationCity = userProfile?.destination_city ?? null;
   const interestCats    = userProfile?.interest_categories ?? null;
 
+  const cacheKey = destinationCity || "none";
+  const cached   = readCache(cacheKey);
+
+  const [progress,   setProgress]   = useState(cached?.progress ?? null);
+  const [tasks,      setTasks]      = useState(cached?.tasks ?? []);
+  const [rights,     setRights]     = useState(cached?.rights ?? []);
+  const [loading,    setLoading]    = useState(!cached);
+  const [error,      setError]      = useState(null);
+  const [savingId,   setSavingId]   = useState(null);
+  const [showInfo,   setShowInfo]   = useState(false);
+
   useEffect(() => {
     let alive = true;
-    setLoading(true);
+    // Only show the spinner when there's nothing cached to show meanwhile —
+    // this still refetches fresh data every mount, just silently.
+    if (!readCache(cacheKey)) setLoading(true);
     Promise.all([
       api.progress(),
       api.items({ type: "moving_task" }),
@@ -187,6 +215,7 @@ export default function Dashboard() {
         setProgress(p);
         setTasks(t);
         setRights(r);
+        writeCache(cacheKey, { progress: p, tasks: t, rights: r });
       })
       .catch((e) => alive && setError(e.message))
       .finally(() => alive && setLoading(false));
@@ -202,11 +231,13 @@ export default function Dashboard() {
         notes: item.notes ?? null,
         next_action: item.next_action ?? null,
       });
-      setTasks((prev) =>
-        prev.map((it) =>
+      setTasks((prev) => {
+        const next = prev.map((it) =>
           it.item_type === updated.item_type && it.item_id === updated.item_id ? updated : it
-        )
-      );
+        );
+        writeCache(cacheKey, { progress, tasks: next, rights });
+        return next;
+      });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -220,7 +251,13 @@ export default function Dashboard() {
       <main className="pt-32 pb-xl px-gutter max-w-container-max mx-auto">
 
         <section className="mb-lg text-right">
-          <h1 className="font-headline-xl text-headline-xl text-primary mb-sm leading-tight">
+          {fullName && (
+            <p className="font-headline-lg text-headline-lg text-on-surface-variant text-center mb-md">
+              <span>היי,</span>
+              <span className="ms-sm">{fullName}!</span>
+            </p>
+          )}
+          <h1 className="font-headline-lg text-headline-lg text-primary mb-xs leading-tight">
             מלווים אותך שלב אחר שלב עד שמרגישים בבית
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
@@ -248,10 +285,10 @@ export default function Dashboard() {
             <section className="mb-xl">
               <div className="mb-md">
                 <h2 className="font-headline-md text-headline-md text-on-surface">
-                  משימות המעבר
+                  משימות לקראת המעבר
                 </h2>
                 <span className="font-label-md text-label-md text-on-surface-variant">
-                  {progress ? `${progress.completed} מתוך ${progress.total} הושלמו` : ""}
+                  {progress ? `${progress.completed} מתוך ${progress.total} משימות הושלמו` : ""}
                 </span>
               </div>
               <TasksSection

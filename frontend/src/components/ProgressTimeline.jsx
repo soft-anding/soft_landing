@@ -1,12 +1,20 @@
 const WINDOW_DAYS = 90;
 
-const STAGES = [
-  { pct: 0,   label: "3 חודשים" },
-  { pct: 25,  label: "חודשיים"  },
-  { pct: 50,  label: "חודש"     },
-  { pct: 75,  label: "שבוע"     },
-  { pct: 100, label: "הגיע!"    },
+// Node positions reflect their real day thresholds (out of WINDOW_DAYS),
+// not even spacing — so the truck (driven by actual days left) lines up
+// with the milestone it has actually reached.
+const STAGE_DAYS = [
+  { days: 90, label: "3 חודשים" },
+  { days: 60, label: "חודשיים"  },
+  { days: 30, label: "חודש"     },
+  { days: 7,  label: "שבוע"     },
+  { days: 0,  label: "היום!"    },
 ];
+
+const STAGES = STAGE_DAYS.map(({ days, label }) => ({
+  pct: ((WINDOW_DAYS - days) / WINDOW_DAYS) * 100,
+  label,
+}));
 
 const CITY_LABELS = { jerusalem: "ירושלים", tel_aviv: "תל אביב" };
 
@@ -35,11 +43,11 @@ export default function ProgressTimeline({
     daysLeft === null  ? "הגדירו תאריך מעבר" :
     daysLeft < 0       ? "הגעתם! 🎉" :
     daysLeft === 0     ? "יום המעבר! 🚚" :
-                         `${daysLeft} ימים עד המעבר${cityLabel ? ` ל${cityLabel}` : ""}`;
+                         `יש לך עוד ${daysLeft} ימים עד המעבר${cityLabel ? ` ל${cityLabel}` : ""}`;
 
   return (
     <section className="mb-lg w-full">
-      <div className="bg-white rounded-xl px-md pt-sm pb-xs shadow-sm">
+      <div className="bg-white rounded-xl px-lg pt-sm pb-xs shadow-sm">
 
         {/* Compact one-line header */}
         <div className="mb-xs">
@@ -48,10 +56,17 @@ export default function ProgressTimeline({
           </span>
         </div>
 
-        {/* Track + truck */}
-        <div className="relative" style={{ paddingTop: "2.2rem", paddingBottom: "1.6rem" }}>
-          {/* Track bar */}
-          <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-outline-variant -translate-y-1/2 rounded-full overflow-hidden">
+        {/* Track + truck — fixed pixel anchor (not 50%-of-self) so the truck
+            always has guaranteed clearance above the line regardless of how
+            tall the nodes/labels below it end up being. */}
+        <div className="relative" style={{ height: "8.5rem" }}>
+          {/* Track bar — extends a bit past the container on both ends so the
+              first/last dots (centered exactly on the container edges) sit
+              fully on the bar instead of spilling off its rounded tips. */}
+          <div
+            className="absolute h-1.5 bg-outline-variant rounded-full overflow-hidden"
+            style={{ top: "5rem", left: "-0.4rem", right: "-0.4rem" }}
+          >
             <div
               className="h-full bg-primary transition-all duration-1000 ease-out ml-auto"
               style={{ width: `${clamped}%` }}
@@ -60,32 +75,35 @@ export default function ProgressTimeline({
 
           {/* Truck icon */}
           <div
-            className="absolute top-1/2 -translate-y-full transition-all duration-1000 ease-out"
-            style={{ right: `calc(${clamped}% - 2rem)` }}
+            className="absolute -translate-y-full transition-all duration-1000 ease-out"
+            style={{ top: "5rem", right: `calc(${clamped}% - 2.25rem)` }}
           >
-            <div className="bg-white p-1 rounded-lg shadow-md border border-primary/20">
-              <img
-                src="/track.png"
-                alt="משאית מעבר"
-                className="h-16 w-auto truck-animation"
-                style={{ transform: "scaleX(-1)" }}
-              />
-            </div>
+            <img
+              src="/track.png"
+              alt="משאית מעבר"
+              className="h-[4.5rem] w-auto truck-animation drop-shadow-md"
+              style={{ transform: "scaleX(-1)" }}
+            />
           </div>
 
-          {/* Milestone nodes */}
-          <div className="relative z-10 flex justify-between">
+          {/* Milestone nodes — positioned by their real pct, not evenly spaced,
+              so they line up with the truck/track which use the same pct. */}
+          <div className="relative z-10">
             {STAGES.map((s) => {
               const done = clamped >= s.pct;
               return (
-                <div key={s.label} className="flex flex-col items-center">
+                <div
+                  key={s.label}
+                  className="absolute flex flex-col items-center"
+                  style={{ top: "4.5rem", right: `${s.pct}%`, transform: "translate(50%, -6px)" }}
+                >
                   <div
                     className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ring-1 transition-colors duration-500 ${
                       done ? "bg-primary ring-primary" : "bg-outline-variant ring-outline-variant"
                     }`}
                   />
                   <span
-                    className={`mt-1.5 font-label-sm text-label-sm transition-colors duration-500 ${
+                    className={`mt-1.5 whitespace-nowrap font-label-sm text-label-sm transition-colors duration-500 ${
                       done ? "text-primary font-bold" : "text-on-surface-variant"
                     }`}
                     style={{ fontSize: "0.65rem" }}
