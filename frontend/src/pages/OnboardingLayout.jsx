@@ -3,28 +3,26 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Spinner from "../components/Spinner";
 
-// Shared form state across all three steps. Initialised once when the user
-// enters /onboarding; lives for the lifetime of the browser session (reset
-// on page refresh, which is acceptable per spec).
 export const EMPTY_FORM = {
-  // Step 1
-  origin_city:       "",
-  destination_city:  "",
-  move_date:         "",
-  moving_companions: "",
-  // Step 2
-  birth_year:        "",
-  marital_status:    "",
-  occupation:        "",
-  income_range:      "",
-  has_car:           "",   // "" | "true" | "false"
-  // Step 3
-  needs_movers:          "",   // "" | "true" | "false"
-  special_eligibility:   [],   // string[]
-  interest_categories:   ["all"], // string[] | ["all"]
+  origin_city:          "",
+  destination_city:     "",
+  move_date:            "",
+  moving_companions:    "",
+  birth_year:           "",
+  marital_status:       "",
+  occupation:           "",
+  income_range:         "",
+  has_car:              "",
+  needs_movers:         "",
+  special_eligibility:  [],
+  interest_categories:  ["all"],
 };
 
-const STEP_LABELS = ["בסיסי המעבר", "עלייך", "פרטים נוספים"];
+const STEPS = [
+  { path: "step-1", label: "פרטי המעבר" },
+  { path: "step-2", label: "עלייך"       },
+  { path: "step-3", label: "הגדרות"      },
+];
 
 function currentStep(pathname) {
   if (pathname.includes("step-3")) return 3;
@@ -44,30 +42,54 @@ export default function OnboardingLayout() {
   const step = currentStep(location.pathname);
 
   return (
-    <div dir="rtl" style={{ maxWidth: 640, margin: "2rem auto", padding: "0 1rem" }}>
-      {/* ── Step indicator ──────────────────────────────────────────── */}
-      <div style={{ marginBottom: "2rem" }}>
-        <p style={{ color: "#666", fontSize: "0.85rem", marginBottom: "0.5rem" }}>
-          שלב {step} מתוך 3 — {STEP_LABELS[step - 1]}
-        </p>
-        <div style={{ display: "flex", gap: "0.4rem" }}>
-          {[1, 2, 3].map((n) => (
-            <div
-              key={n}
-              style={{
-                flex: 1,
-                height: 5,
-                borderRadius: 3,
-                background: n <= step ? "#4f46e5" : "#e5e7eb",
-                transition: "background 0.2s",
-              }}
-            />
-          ))}
+    /* ── Page shell ────────────────────────────────────────────────── */
+    <div
+      dir="rtl"
+      className="min-h-screen flex flex-col items-center justify-center px-gutter py-xl"
+      style={{ background: "#fff8ef" }}
+    >
+      {/* App wordmark */}
+      <div className="flex items-center gap-base mb-md">
+        <div className="w-9 h-9 bg-primary-container rounded-lg flex items-center justify-center text-on-primary soft-shadow">
+          <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+            home_pin
+          </span>
         </div>
+        <span className="font-headline-md text-headline-md text-primary">נחיתה רכה</span>
       </div>
 
-      {/* Step content — receives form state via Outlet context */}
-      <Outlet context={{ form, setForm }} />
+      {/* ── Card ──────────────────────────────────────────────────────── */}
+      <div className="w-full max-w-[540px] bg-white rounded-xl soft-shadow border border-surface-variant/30 overflow-hidden">
+
+        {/* Card header — step indicator */}
+        <div className="px-md pt-md pb-sm md:px-lg border-b border-surface-variant/20">
+          {/* 3-segment bar */}
+          <div className="flex gap-xs mb-sm">
+            {STEPS.map((s, i) => (
+              <div
+                key={s.path}
+                className={`flex-1 h-1.5 rounded-full transition-colors duration-300 ${
+                  i + 1 <= step ? "bg-primary" : "bg-outline-variant/40"
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-baseline justify-between">
+            <span className="font-label-md text-label-md text-on-surface">
+              {STEPS[step - 1].label}
+            </span>
+            <span className="font-label-sm text-label-sm text-on-surface-variant">
+              שלב {step} מתוך 3
+            </span>
+          </div>
+        </div>
+
+        {/* Card body — step content */}
+        <div className="px-md pt-md pb-lg md:px-lg">
+          <Outlet context={{ form, setForm }} />
+        </div>
+      </div>
     </div>
   );
 }

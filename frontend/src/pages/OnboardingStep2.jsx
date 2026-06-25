@@ -1,13 +1,26 @@
 import { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-const THIS_YEAR = new Date().getFullYear();
-// Birth year range: 15 to 86 years ago (1940–current-15)
-const BIRTH_YEARS = Array.from(
-  { length: THIS_YEAR - 15 - 1940 + 1 },
-  (_, i) => THIS_YEAR - 15 - i
-);
+// ── Shared style tokens ───────────────────────────────────────────────────────
+const fieldCls  = "mb-md";
+const labelCls  = "block font-label-md text-label-md text-on-surface mb-xs";
+const inputCls  = "w-full border border-outline-variant rounded bg-white px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors";
+const errCls    = "font-label-sm text-label-sm text-error mt-xs";
 
+// ── Birth year validation ─────────────────────────────────────────────────────
+const MIN_YEAR = 1930;
+const MAX_YEAR = 2015;
+
+function validateBirthYear(val) {
+  const trimmed = (val || "").trim();
+  if (!trimmed) return "שדה חובה";
+  if (!/^\d{4}$/.test(trimmed)) return "יש להזין שנה בת 4 ספרות";
+  const n = parseInt(trimmed, 10);
+  if (n < MIN_YEAR || n > MAX_YEAR) return `שנה חייבת להיות בין ${MIN_YEAR} ל-${MAX_YEAR}`;
+  return null;
+}
+
+// ── Options ───────────────────────────────────────────────────────────────────
 const MARITAL_OPTIONS = [
   { value: "single",          label: "רווק/ה" },
   { value: "in_relationship", label: "בזוגיות" },
@@ -33,28 +46,22 @@ const INCOME_OPTIONS = [
   { value: "prefer_not_to_say", label: "מעדיף/ה לא לציין" },
 ];
 
-const s = {
-  field:  { marginBottom: "1.5rem" },
-  label:  { display: "block", fontWeight: "bold", marginBottom: "0.4rem" },
-  input:  { width: "100%", padding: "0.4rem 0.6rem", fontSize: "1rem", boxSizing: "border-box" },
-  error:  { color: "red", fontSize: "0.85rem", marginTop: "0.25rem" },
-  footer: { display: "flex", justifyContent: "space-between", marginTop: "2rem" },
-  back:   { padding: "0.7rem 2rem", fontSize: "1rem", cursor: "pointer", background: "none", border: "1px solid #ccc" },
-  next:   { padding: "0.7rem 2.5rem", fontSize: "1rem", cursor: "pointer" },
-  radios: { display: "flex", gap: "1.5rem" },
-};
-
+// ── Yes/No radio group ────────────────────────────────────────────────────────
 function YesNo({ id, value, onChange }) {
   return (
-    <div style={s.radios}>
+    <div className="flex gap-md">
       {[{ v: "true", l: "כן" }, { v: "false", l: "לא" }].map(({ v, l }) => (
-        <label key={v} style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
+        <label
+          key={v}
+          className="flex items-center gap-sm cursor-pointer text-body-md font-body-md text-on-surface"
+        >
           <input
             type="radio"
             name={id}
             value={v}
             checked={value === v}
             onChange={() => onChange(v)}
+            className="text-primary border-outline-variant focus:ring-primary focus:ring-2 h-4 w-4"
           />
           {l}
         </label>
@@ -63,51 +70,70 @@ function YesNo({ id, value, onChange }) {
   );
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function OnboardingStep2() {
   const { form, setForm } = useOutletContext();
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
 
-  function set(field, value) {
-    setForm((f) => ({ ...f, [field]: value }));
-    setErrors((e) => ({ ...e, [field]: undefined }));
+  function set(fieldName, value) {
+    setForm((f) => ({ ...f, [fieldName]: value }));
+    setErrors((e) => ({ ...e, [fieldName]: undefined }));
+  }
+
+  // Validate birth year on blur so the user gets instant feedback
+  function handleBirthYearBlur() {
+    const msg = validateBirthYear(form.birth_year);
+    setErrors((e) => ({ ...e, birth_year: msg ?? undefined }));
   }
 
   function handleNext(e) {
     e.preventDefault();
-    const errs = {};
-    if (!form.birth_year) errs.birth_year = "שדה חובה";
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    const birthErr = validateBirthYear(form.birth_year);
+    if (birthErr) {
+      setErrors((prev) => ({ ...prev, birth_year: birthErr }));
+      return;
+    }
     navigate("/onboarding/step-3");
   }
 
   return (
     <form onSubmit={handleNext} noValidate>
-      <h1 style={{ marginBottom: "1.5rem" }}>קצת עלייך</h1>
+      <h2 className="font-headline-md text-headline-md text-on-surface mb-md">
+        קצת עלייך
+      </h2>
 
-      {/* Birth year */}
-      <div style={s.field}>
-        <label style={s.label} htmlFor="birth_year">שנת לידה *</label>
-        <select
+      {/* Birth year — plain number input */}
+      <div className={fieldCls}>
+        <label className={labelCls} htmlFor="birth_year">
+          שנת לידה <span className="text-error">*</span>
+        </label>
+        <input
           id="birth_year"
-          style={s.input}
+          type="text"
+          inputMode="numeric"
+          maxLength={4}
+          placeholder="לדוגמה: 1992"
+          className={`${inputCls} ${errors.birth_year ? "border-error focus:border-error" : ""}`}
           value={form.birth_year}
-          onChange={(e) => set("birth_year", e.target.value)}
-        >
-          <option value="">בחרו שנה</option>
-          {BIRTH_YEARS.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-        {errors.birth_year && <p style={s.error}>{errors.birth_year}</p>}
+          onChange={(e) => set("birth_year", e.target.value.replace(/\D/g, "").slice(0, 4))}
+          onBlur={handleBirthYearBlur}
+          dir="ltr"
+        />
+        {errors.birth_year && <p className={errCls}>{errors.birth_year}</p>}
+        {!errors.birth_year && (
+          <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
+            בין {MIN_YEAR} ל-{MAX_YEAR}
+          </p>
+        )}
       </div>
 
       {/* Marital status */}
-      <div style={s.field}>
-        <label style={s.label} htmlFor="marital_status">מצב משפחתי</label>
+      <div className={fieldCls}>
+        <label className={labelCls} htmlFor="marital_status">מצב משפחתי</label>
         <select
           id="marital_status"
-          style={s.input}
+          className={inputCls}
           value={form.marital_status}
           onChange={(e) => set("marital_status", e.target.value)}
         >
@@ -119,11 +145,11 @@ export default function OnboardingStep2() {
       </div>
 
       {/* Occupation */}
-      <div style={s.field}>
-        <label style={s.label} htmlFor="occupation">תעסוקה</label>
+      <div className={fieldCls}>
+        <label className={labelCls} htmlFor="occupation">תעסוקה</label>
         <select
           id="occupation"
-          style={s.input}
+          className={inputCls}
           value={form.occupation}
           onChange={(e) => set("occupation", e.target.value)}
         >
@@ -135,11 +161,13 @@ export default function OnboardingStep2() {
       </div>
 
       {/* Income range */}
-      <div style={s.field}>
-        <label style={s.label} htmlFor="income_range">טווח הכנסה חודשית (נטו)</label>
+      <div className={fieldCls}>
+        <label className={labelCls} htmlFor="income_range">
+          טווח הכנסה חודשית (נטו)
+        </label>
         <select
           id="income_range"
-          style={s.input}
+          className={inputCls}
           value={form.income_range}
           onChange={(e) => set("income_range", e.target.value)}
         >
@@ -151,16 +179,28 @@ export default function OnboardingStep2() {
       </div>
 
       {/* Has car */}
-      <div style={s.field}>
-        <label style={{ ...s.label, marginBottom: "0.7rem" }}>יש לכם רכב?</label>
+      <div className={fieldCls}>
+        <p className={`${labelCls} mb-sm`}>יש לכם רכב?</p>
         <YesNo id="has_car" value={form.has_car} onChange={(v) => set("has_car", v)} />
       </div>
 
-      <div style={s.footer}>
-        <button type="button" style={s.back} onClick={() => navigate("/onboarding/step-1")}>
-          → חזרה
+      {/* Footer */}
+      <div className="flex justify-between items-center mt-lg pt-md border-t border-surface-variant/30">
+        <button
+          type="button"
+          onClick={() => navigate("/onboarding/step-1")}
+          className="font-label-md text-label-md text-primary flex items-center gap-xs hover:underline"
+        >
+          <span className="material-symbols-outlined text-base">arrow_forward</span>
+          חזרה
         </button>
-        <button type="submit" style={s.next}>הבא ←</button>
+        <button
+          type="submit"
+          className="bg-primary text-on-primary px-lg py-sm rounded-full font-label-md text-label-md hover:bg-primary/90 active:scale-95 transition-all duration-200 flex items-center gap-xs"
+        >
+          הבא
+          <span className="material-symbols-outlined text-base">arrow_back</span>
+        </button>
       </div>
     </form>
   );
