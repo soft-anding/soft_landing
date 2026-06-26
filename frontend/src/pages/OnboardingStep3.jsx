@@ -13,6 +13,11 @@ const checkCls   = "text-primary border-outline-variant focus:ring-primary focus
 const checkRowCls = "flex items-center gap-sm cursor-pointer font-body-md text-body-md text-on-surface py-xs hover:bg-surface-container-low rounded px-xs transition-colors";
 
 // ── Eligibility options ───────────────────────────────────────────────────────
+// "none" is a UI-only sentinel meaning "explicitly none of these" — it's
+// stripped out before saving, so the field starts truly empty (nothing
+// selected) instead of defaulting to "none of these" being checked.
+const NONE_VALUE = "none";
+
 const ELIGIBILITY_OPTIONS = [
   { value: "student",            label: "סטודנט/ית" },
   { value: "discharged_soldier", label: "מסיים/ת שירות סדיר או לאומי" },
@@ -74,11 +79,15 @@ export default function OnboardingStep3() {
   function toggleEligibility(value) {
     setForm((f) => {
       const cur = f.special_eligibility;
+      if (value === NONE_VALUE) {
+        return { ...f, special_eligibility: cur.includes(NONE_VALUE) ? [] : [NONE_VALUE] };
+      }
+      const withoutNone = cur.filter((v) => v !== NONE_VALUE);
       return {
         ...f,
-        special_eligibility: cur.includes(value)
-          ? cur.filter((v) => v !== value)
-          : [...cur, value],
+        special_eligibility: withoutNone.includes(value)
+          ? withoutNone.filter((v) => v !== value)
+          : [...withoutNone, value],
       };
     });
   }
@@ -124,7 +133,7 @@ export default function OnboardingStep3() {
       income_range:        form.income_range       || null,
       has_car:             form.has_car      === "" ? null : form.has_car      === "true",
       needs_movers:        form.needs_movers === "" ? null : form.needs_movers === "true",
-      special_eligibility: form.special_eligibility,
+      special_eligibility: form.special_eligibility.filter((v) => v !== NONE_VALUE),
       interest_categories: form.interest_categories.length
         ? form.interest_categories
         : ["all"],
@@ -145,9 +154,12 @@ export default function OnboardingStep3() {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <h2 className="font-headline-md text-headline-md text-on-surface mb-md">
-        עוד כמה פרטים
+      <h2 className="font-headline-md text-headline-md text-on-surface text-center mb-xs">
+        התאמה אישית
       </h2>
+      <p className="font-body-md text-body-md text-on-surface-variant text-center mb-md">
+        כמה שאלות אחרונות שיעזרו לנו לדייק את המידע במיוחד בשבילכם.
+      </p>
 
       {/* Needs movers */}
       <div className={fieldCls}>
@@ -182,8 +194,8 @@ export default function OnboardingStep3() {
             <input
               type="checkbox"
               className={checkCls}
-              checked={form.special_eligibility.length === 0}
-              onChange={() => setForm((f) => ({ ...f, special_eligibility: [] }))}
+              checked={form.special_eligibility.includes(NONE_VALUE)}
+              onChange={() => toggleEligibility(NONE_VALUE)}
             />
             אף אחד מאלה
           </label>
@@ -249,7 +261,7 @@ export default function OnboardingStep3() {
           type="button"
           onClick={() => navigate("/onboarding/step-2")}
           disabled={submitting}
-          className="font-label-md text-label-md text-primary flex items-center gap-xs hover:underline disabled:opacity-40"
+          className="border border-outline-variant rounded-full px-lg py-sm font-label-md text-label-md text-on-surface-variant flex items-center gap-xs hover:bg-outline-variant/10 transition-colors disabled:opacity-40"
         >
           <span className="material-symbols-outlined text-base">arrow_forward</span>
           חזרה

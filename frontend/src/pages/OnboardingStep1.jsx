@@ -36,6 +36,8 @@ export default function OnboardingStep1() {
   function handleNext(e) {
     e.preventDefault();
     const errs = {};
+    if (!form.full_name)         errs.full_name        = "שדה חובה";
+    if (!form.origin_city)       errs.origin_city       = "שדה חובה";
     if (!form.destination_city) errs.destination_city = "שדה חובה";
     if (!form.move_date)         errs.move_date        = "שדה חובה";
     if (Object.keys(errs).length) { setErrors(errs); return; }
@@ -44,40 +46,46 @@ export default function OnboardingStep1() {
 
   return (
     <form onSubmit={handleNext} noValidate>
-      <h2 className="font-headline-md text-headline-md text-on-surface mb-md">
+      <h2 className="font-headline-md text-headline-md text-on-surface text-center mb-xs">
         ספרו לנו על המעבר
       </h2>
+      <p className="font-body-md text-body-md text-on-surface-variant text-center mb-md">
+        המידע יעזור לנו לבנות עבורכם רשימת משימות מותאמת אישית.
+      </p>
 
       {/* Full name */}
       <div className={field}>
         <label className={label} htmlFor="full_name">
-          שם מלא
+          שם מלא <span className="text-error">*</span>
         </label>
         <input
           id="full_name"
           type="text"
-          className={select}
+          placeholder="הקלידו את שמכם"
+          className={`${select} ${errors.full_name ? "border-error" : ""}`}
           value={form.full_name}
           onChange={(e) => set("full_name", e.target.value)}
         />
+        {errors.full_name && <p className={err}>{errors.full_name}</p>}
       </div>
 
       {/* Origin city */}
       <div className={field}>
         <label className={label} htmlFor="origin_city">
-          מאיזו עיר אתם עוברים?
+          מאיזו עיר אתם עוברים? <span className="text-error">*</span>
         </label>
         <select
           id="origin_city"
-          className={select}
+          className={`${select} ${errors.origin_city ? "border-error" : ""}`}
           value={form.origin_city}
           onChange={(e) => set("origin_city", e.target.value)}
         >
-          <option value="">בחרו עיר</option>
+          <option value="" disabled hidden>בחרו עיר</option>
           {CITY_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+        {errors.origin_city && <p className={err}>{errors.origin_city}</p>}
       </div>
 
       {/* Destination city */}
@@ -91,7 +99,7 @@ export default function OnboardingStep1() {
           value={form.destination_city}
           onChange={(e) => set("destination_city", e.target.value)}
         >
-          <option value="">בחרו עיר</option>
+          <option value="" disabled hidden>בחרו עיר</option>
           {CITY_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -107,6 +115,7 @@ export default function OnboardingStep1() {
         <input
           id="move_date"
           type="date"
+          lang="en-GB"
           className={`${select} ${errors.move_date ? "border-error" : ""}`}
           value={form.move_date}
           onChange={(e) => set("move_date", e.target.value)}
@@ -123,7 +132,7 @@ export default function OnboardingStep1() {
           value={form.moving_companions}
           onChange={(e) => set("moving_companions", e.target.value)}
         >
-          <option value="">בחרו</option>
+          <option value="" disabled hidden>בחרו</option>
           {COMPANIONS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -135,7 +144,7 @@ export default function OnboardingStep1() {
         <button
           type="button"
           onClick={async () => { await signOut(); navigate("/"); }}
-          className="font-label-md text-label-md text-primary flex items-center gap-xs hover:underline"
+          className="border border-outline-variant rounded-full px-lg py-sm font-label-md text-label-md text-on-surface-variant flex items-center gap-xs hover:bg-outline-variant/10 transition-colors"
         >
           <span className="material-symbols-outlined text-base">arrow_forward</span>
           חזרה

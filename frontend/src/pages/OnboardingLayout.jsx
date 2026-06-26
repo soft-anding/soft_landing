@@ -7,7 +7,7 @@ export const EMPTY_FORM = {
   full_name:            "",
   origin_city:          "",
   destination_city:     "",
-  move_date:            "",
+  move_date:            "2026-01-01",
   moving_companions:    "",
   birth_year:           "",
   marital_status:       "",
@@ -21,8 +21,8 @@ export const EMPTY_FORM = {
 
 const STEPS = [
   { path: "step-1", label: "פרטי המעבר" },
-  { path: "step-2", label: "עלייך"       },
-  { path: "step-3", label: "הגדרות"      },
+  { path: "step-2", label: "עליכם"       },
+  { path: "step-3", label: "התאמה אישית" },
 ];
 
 function currentStep(pathname) {
@@ -54,39 +54,56 @@ export default function OnboardingLayout() {
       style={{ background: "#fff8ef" }}
     >
       {/* App wordmark */}
-      <div className="flex items-center gap-base mb-md">
-        <div className="w-9 h-9 bg-primary-container rounded-lg flex items-center justify-center text-on-primary soft-shadow">
-          <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+      <div className="flex items-center gap-sm mb-lg">
+        <div className="w-12 h-12 bg-primary-container rounded-lg flex items-center justify-center text-on-primary soft-shadow">
+          <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
             home_pin
           </span>
         </div>
-        <span className="font-headline-md text-headline-md text-primary">נחיתה רכה</span>
+        <span className="font-headline-lg text-headline-lg text-primary">נחיתה רכה</span>
       </div>
 
       {/* ── Card ──────────────────────────────────────────────────────── */}
-      <div className="w-full max-w-[540px] bg-white rounded-xl soft-shadow border border-surface-variant/30 overflow-hidden">
+      <div className="w-full max-w-[680px] bg-white rounded-xl soft-shadow border border-surface-variant/30 overflow-hidden">
 
         {/* Card header — step indicator */}
         <div className="px-md pt-md pb-sm md:px-lg border-b border-surface-variant/20">
-          {/* 3-segment bar */}
-          <div className="flex gap-xs mb-sm">
-            {STEPS.map((s, i) => (
-              <div
-                key={s.path}
-                className={`flex-1 h-1.5 rounded-full transition-colors duration-300 ${
-                  i + 1 <= step ? "bg-primary" : "bg-outline-variant/40"
-                }`}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-baseline justify-between">
-            <span className="font-label-md text-label-md text-on-surface">
-              {STEPS[step - 1].label}
-            </span>
-            <span className="font-label-sm text-label-sm text-on-surface-variant">
-              שלב {step} מתוך 3
-            </span>
+          <div className="flex items-start">
+            {STEPS.map((s, i) => {
+              const n = i + 1;
+              const isDone    = n < step;
+              const isCurrent = n === step;
+              return (
+                <div key={s.path} className={`flex items-start ${i < STEPS.length - 1 ? "flex-1" : ""}`}>
+                  <div className="flex flex-col items-center gap-xs">
+                    <div
+                      className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center font-label-sm text-label-sm font-bold transition-colors duration-300 ${
+                        isDone || isCurrent
+                          ? "bg-primary text-on-primary"
+                          : "bg-white text-on-surface-variant border border-outline-variant"
+                      }`}
+                    >
+                      {n}
+                    </div>
+                    <span
+                      className={`font-label-sm text-label-sm whitespace-nowrap ${
+                        isCurrent ? "text-primary font-bold" : "text-on-surface-variant"
+                      }`}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div
+                      className={`flex-1 h-px mx-xs transition-colors duration-300 ${
+                        isDone ? "bg-primary" : "bg-outline-variant/40"
+                      }`}
+                      style={{ marginTop: "0.875rem" }}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -99,9 +99,12 @@ export default function OnboardingStep2() {
 
   return (
     <form onSubmit={handleNext} noValidate>
-      <h2 className="font-headline-md text-headline-md text-on-surface mb-md">
-        קצת עלייך
+      <h2 className="font-headline-md text-headline-md text-on-surface text-center mb-xs">
+        קצת עליכם
       </h2>
+      <p className="font-body-md text-body-md text-on-surface-variant text-center mb-md">
+        עוד כמה פרטים קטנים שיעזרו לנו להתאים את המעבר בדיוק בשבילכם.
+      </p>
 
       {/* Birth year — plain number input */}
       <div className={fieldCls}>
@@ -131,7 +134,7 @@ export default function OnboardingStep2() {
           value={form.marital_status}
           onChange={(e) => set("marital_status", e.target.value)}
         >
-          <option value="">בחרו</option>
+          <option value="" disabled hidden>בחרו</option>
           {MARITAL_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -147,7 +150,7 @@ export default function OnboardingStep2() {
           value={form.occupation}
           onChange={(e) => set("occupation", e.target.value)}
         >
-          <option value="">בחרו</option>
+          <option value="" disabled hidden>בחרו</option>
           {OCCUPATION_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -165,7 +168,7 @@ export default function OnboardingStep2() {
           value={form.income_range}
           onChange={(e) => set("income_range", e.target.value)}
         >
-          <option value="">בחרו</option>
+          <option value="" disabled hidden>בחרו</option>
           {INCOME_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -183,7 +186,7 @@ export default function OnboardingStep2() {
         <button
           type="button"
           onClick={() => navigate("/onboarding/step-1")}
-          className="font-label-md text-label-md text-primary flex items-center gap-xs hover:underline"
+          className="border border-outline-variant rounded-full px-lg py-sm font-label-md text-label-md text-on-surface-variant flex items-center gap-xs hover:bg-outline-variant/10 transition-colors"
         >
           <span className="material-symbols-outlined text-base">arrow_forward</span>
           חזרה
