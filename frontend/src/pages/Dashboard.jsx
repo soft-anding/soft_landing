@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AppHeader from "../components/AppHeader";
 import AskBox from "../components/AskBox";
 import ProgressTimeline from "../components/ProgressTimeline";
+import SideDrawer from "../components/SideDrawer";
 import Spinner from "../components/Spinner";
 import TaskCard from "../components/TaskCard";
 import { useAuth } from "../auth/AuthContext";
@@ -88,10 +89,10 @@ function InfoCard({ item }) {
   const hasDetails = item.summary || item.discount_amount || item.source_url;
 
   return (
-    <div className="bg-white rounded-xl border border-outline-variant/30 soft-shadow text-right">
+    <div className="bg-white rounded-xl border border-outline-variant/30 soft-shadow text-right flex flex-col min-h-32">
       {/* Header — always visible */}
       <div className="p-md flex justify-between items-start gap-sm">
-        <h4 className="font-headline-sm text-headline-sm text-on-surface flex-1">
+        <h4 className="font-headline-sm text-headline-sm text-on-surface flex-1 line-clamp-2 min-h-[3rem]">
           {item.title_he || "ללא כותרת"}
         </h4>
         {item.category_label && (
@@ -104,19 +105,21 @@ function InfoCard({ item }) {
       {/* Accordion toggle */}
       {hasDetails && (
         <button
-          onClick={() => setExpanded((e) => !e)}
-          className="flex items-center gap-xs w-full px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
+          onClick={() => setExpanded(true)}
+          className="flex items-center gap-xs w-full px-md pb-md mt-auto font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
         >
-          <span>{expanded ? "סגור" : "פרטים"}</span>
-          <span className="material-symbols-outlined text-sm">
-            {expanded ? "expand_less" : "expand_more"}
-          </span>
+          <span>פרטים</span>
+          <span className="material-symbols-outlined text-sm">chevron_left</span>
         </button>
       )}
 
-      {/* Accordion content */}
-      {expanded && (
-        <div className="border-t border-outline-variant/20 px-md pt-sm pb-md space-y-sm">
+      {/* Details drawer (slides in from the side instead of pushing content down) */}
+      <SideDrawer
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title={item.title_he || "פרטים"}
+      >
+        <div className="space-y-sm">
           {item.summary && (
             <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
               {item.summary}
@@ -139,7 +142,7 @@ function InfoCard({ item }) {
             </a>
           )}
         </div>
-      )}
+      </SideDrawer>
     </div>
   );
 }

@@ -28,24 +28,31 @@ export function AuthProvider({ children }) {
 
     let active = true;
     let initialized = false;
+    let currentUserId = null;
 
     // Use onAuthStateChange as the single source of truth for session state.
     // INITIAL_SESSION fires immediately with the current session (null if logged out,
-    // or the stored session if logged in). SIGNED_IN fires after OAuth redirects.
-    // Supabase also re-fires INITIAL_SESSION/TOKEN_REFRESHED whenever the tab regains
-    // focus. Those re-fires carry no information we don't already have (api.js reads
-    // the token straight from supabase.auth.getSession() on every call, not from this
-    // state), so once we've initialized, fully ignore anything that isn't a real
-    // sign-in/out — no state update, no profile refetch, no re-render at all.
+    // or the stored session if logged in). Supabase-js ALSO silently re-validates the
+    // stored session every time the tab regains focus, and re-fires SIGNED_IN even
+    // though the user never actually signed in again — confirmed via console logging
+    // (event=SIGNED_IN, initialized=true, fired within ~1ms of a visibilitychange to
+    // "visible"). Treating every SIGNED_IN/SIGNED_OUT as a real transition made the
+    // whole app unmount to a loading spinner and refetch on every tab switch. Only
+    // react to it when the signed-in user id actually changed.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!active) return;
 
-        const isTransition = event === "SIGNED_IN" || event === "SIGNED_OUT";
-        if (initialized && !isTransition) return;
+        const newUserId = newSession?.user?.id ?? null;
+        const isRealTransition =
+          (event === "SIGNED_IN" && newUserId !== currentUserId) ||
+          (event === "SIGNED_OUT" && currentUserId !== null);
+
+        if (initialized && !isRealTransition) return;
 
         setLoading(true);
         setSession(newSession);
+        currentUserId = newUserId;
 
         if (newSession?.user) {
           const profile = await loadProfile(newSession.user.id);

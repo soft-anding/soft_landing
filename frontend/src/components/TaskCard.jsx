@@ -12,7 +12,7 @@ export default function TaskCard({ item, onStatusChange, saving }) {
 
   return (
     <div
-      className={`bg-white rounded-xl border soft-shadow flex flex-col transition-all duration-200 ${
+      className={`bg-white rounded-xl border soft-shadow flex flex-col min-h-32 transition-all duration-200 ${
         done ? "border-primary/40" : "border-outline-variant/30"
       }`}
     >
@@ -27,7 +27,7 @@ export default function TaskCard({ item, onStatusChange, saving }) {
             </span>
           )}
           <h3
-            className={`font-headline-sm text-headline-sm text-on-surface leading-snug ${
+            className={`font-headline-sm text-headline-sm text-on-surface line-clamp-2 min-h-[3rem] ${
               done ? "line-through opacity-50" : ""
             }`}
           >
@@ -58,7 +58,7 @@ export default function TaskCard({ item, onStatusChange, saving }) {
       {/* ── Accordion toggle ──────────────────────────────────────────── */}
       <button
         onClick={() => setExpanded((e) => !e)}
-        className="flex items-center gap-xs px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
+        className="flex items-center gap-xs px-md pb-md mt-auto font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
       >
         <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
         <span className="material-symbols-outlined text-sm">
