@@ -9,7 +9,7 @@ const fieldCls   = "mb-md";
 const labelCls   = "block font-label-md text-label-md text-on-surface mb-xs";
 const hintCls    = "font-label-sm text-label-sm text-on-surface-variant mt-xs";
 const errCls     = "font-label-sm text-label-sm text-error mt-xs";
-const checkCls   = "text-primary border-outline-variant focus:ring-primary focus:ring-2 rounded h-4 w-4 shrink-0 accent-primary";
+const checkCls   = "text-primary border-outline-variant focus:ring-primary focus:ring-2 rounded-sm h-4 w-4 shrink-0 accent-primary";
 const checkRowCls = "flex items-center gap-sm cursor-pointer font-body-md text-body-md text-on-surface py-xs hover:bg-surface-container-low rounded px-xs transition-colors";
 
 // ── Eligibility options ───────────────────────────────────────────────────────

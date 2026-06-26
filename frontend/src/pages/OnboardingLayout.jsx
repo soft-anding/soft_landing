@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Spinner from "../components/Spinner";
@@ -35,6 +35,10 @@ export default function OnboardingLayout() {
   const { session, userProfile, loading } = useAuth();
   const location = useLocation();
   const [form, setForm] = useState(EMPTY_FORM);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   if (loading) return <Spinner full />;
   if (!session) return <Navigate to="/" replace />;
