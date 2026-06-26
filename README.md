@@ -95,6 +95,13 @@ npm run dev          # http://localhost:5173  (proxies /api -> :8000)
 
 Open http://localhost:5173, sign in with Google, and you land on the dashboard.
 
+**Optional — AI agent skills:** this repo uses [Supabase's agent skills](https://github.com/supabase/agent-skills)
+for Claude Code / Cursor / Copilot. They're gitignored (machine-local), so after cloning run:
+
+```bash
+npx skills experimental_install
+```
+
 ## Production build / Railway
 
 Railway uses `nixpacks.toml`: it builds the frontend, installs the backend, then starts FastAPI,

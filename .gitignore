@@ -37,6 +37,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# agent skills — installed content is machine-local (run
+# `npx skills experimental_install` after pulling to restore from skills-lock.json,
+# which IS committed so everyone restores the same pinned version)
+.agents/
+.claude/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
