@@ -432,14 +432,13 @@ export default function ProfileDrawer({ open, onClose }) {
         )}
 
         {/* ── Save button ──────────────────────────────── */}
-        <div className="sticky bottom-0 -mx-md px-md py-sm bg-white border-t border-outline-variant/30">
+        <div className="pt-md mt-md border-t border-outline-variant/30 flex justify-center">
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-primary text-on-primary py-sm rounded-full font-label-md text-label-md hover:bg-primary/90 active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-xs"
+            className="bg-primary/90 text-on-primary px-lg py-sm rounded-full font-label-sm text-label-sm hover:bg-primary active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
           >
             {saving ? "שומר…" : "שמור שינויים"}
-            {!saving && <span className="material-symbols-outlined text-base">save</span>}
           </button>
         </div>
 

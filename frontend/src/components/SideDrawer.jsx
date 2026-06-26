@@ -34,8 +34,7 @@ export default function SideDrawer({ open, onClose, title, side = "right", child
           open ? "translate-x-0" : closedCls
         }`}
       >
-        <div className="flex items-center justify-between px-md py-sm border-b border-outline-variant/30 shrink-0">
-          <h3 className="font-headline-sm text-headline-sm text-on-surface truncate">{title}</h3>
+        <div className="flex items-center gap-sm px-md py-sm border-b border-outline-variant/30 shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -44,6 +43,7 @@ export default function SideDrawer({ open, onClose, title, side = "right", child
           >
             <span className="material-symbols-outlined">close</span>
           </button>
+          <h3 className="font-headline-sm text-headline-sm text-on-surface truncate">{title}</h3>
         </div>
 
         <div className="flex-1 overflow-y-auto px-md py-md text-right">
