@@ -44,11 +44,11 @@ export default function Login() {
           <div className="space-y-md text-right">
             <div>
               <h1 className="font-headline-xl text-headline-xl text-on-surface leading-tight" style={{ fontSize: "48px", lineHeight: "56px" }}>עוברים דירה?</h1>
-              <h1 className="font-headline-xl text-headline-xl text-primary leading-tight" style={{ fontSize: "48px", lineHeight: "56px" }}>בואו נעשה את זה יחד!</h1>
+              <h1 className="font-headline-xl text-headline-xl text-primary leading-tight" style={{ fontSize: "48px", lineHeight: "56px" }}>בואו נעשה את זה ביחד!</h1>
             </div>
 
             <p className="font-body-md text-body-md text-on-surface-variant max-w-[480px]">
-              נבנה לכם מסלול אישי למעבר: משימות, טיפים, רשימות ותזכורות - שיעזרו לך לסגור כל פינה בראש שקט.
+              נבנה לכם מסלול אישי למעבר: משימות, טיפים, רשימות ותזכורות - שיעזרו לכם לסגור כל פינה בראש שקט.
             </p>
 
             <div>
@@ -92,8 +92,11 @@ export default function Login() {
         </div>
       </main>
 
-      <footer className="w-full py-sm px-gutter flex items-center justify-center">
-        <p className="font-label-sm text-label-sm text-on-surface-variant">נחיתה רכה — המלווה האישי שלך למעבר דירה</p>
+      <footer className="w-full py-sm px-gutter flex flex-col items-center justify-center gap-xs">
+        <p className="font-label-sm text-label-sm text-on-surface-variant">נחיתה רכה - המלווה האישי שלך למעבר דירה</p>
+        <p className="font-label-sm text-label-sm text-on-surface-variant">
+          ליצירת קשר: soft.landing.israel123@gmail.com
+        </p>
       </footer>
     </div>
   );
