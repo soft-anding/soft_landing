@@ -1,24 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { STATUSES, STATUS_ICON, statusStyle } from "../statusConfig";
-
-// The three "quick-cycle" statuses reachable by clicking the status pill.
-// Edge statuses (בבדיקה, לא רלוונטי, etc.) are still accessible via the
-// full dropdown inside the accordion.
-const CYCLE = ["לא התחיל", "בטיפול", "הושלם"];
-
-function nextInCycle(current) {
-  const i = CYCLE.indexOf(current);
-  // Any status not in the cycle → move to "בטיפול" (started working on it).
-  return i === -1 ? "בטיפול" : CYCLE[(i + 1) % CYCLE.length];
-}
+import SideDrawer from "./SideDrawer";
 
 export default function TaskCard({ item, onStatusChange, saving }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
 
   const done        = item.status === "הושלם";
-  const hasDetails  = item.summary || item.action_steps?.length || item.links?.length;
   const isFilled    = item.status === "הושלם"; // filled icon for done state
 
   return (
@@ -46,60 +35,59 @@ export default function TaskCard({ item, onStatusChange, saving }) {
           </h3>
         </div>
 
-        {/* Collapsed: quick-cycle pill. Expanded: full 7-status dropdown. */}
-        {expanded ? (
-          <select
-            value={item.status}
-            disabled={saving}
-            onChange={(e) => onStatusChange(item, e.target.value)}
-            className={`shrink-0 px-3 py-1.5 rounded-full border font-label-sm text-label-sm bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 ${statusStyle(item.status)}`}
+        {/* Status badge — display only; changing status happens inside the details drawer */}
+        <span
+          title={`סטטוס: ${item.status}`}
+          className={`
+            shrink-0 flex items-center gap-xs
+            px-3 py-1.5 rounded-full border
+            font-label-sm text-label-sm
+            ${statusStyle(item.status)}
+          `}
+        >
+          <span
+            className="material-symbols-outlined text-base"
+            style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
           >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        ) : (
-          <button
-            onClick={() => onStatusChange(item, nextInCycle(item.status))}
-            disabled={saving}
-            title={`סטטוס: ${item.status} — לחץ לשינוי`}
-            className={`
-              shrink-0 flex items-center gap-xs
-              px-3 py-1.5 rounded-full border
-              font-label-sm text-label-sm
-              transition-colors duration-150
-              hover:opacity-75 active:scale-95
-              disabled:opacity-40 disabled:cursor-not-allowed
-              ${statusStyle(item.status)}
-            `}
-          >
-            <span
-              className="material-symbols-outlined text-base"
-              style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
-            >
-              {STATUS_ICON[item.status] || "radio_button_unchecked"}
-            </span>
-            {saving ? "…" : item.status}
-          </button>
-        )}
+            {STATUS_ICON[item.status] || "radio_button_unchecked"}
+          </span>
+          {saving ? "…" : item.status}
+        </span>
       </div>
 
       {/* ── Accordion toggle ──────────────────────────────────────────── */}
-      {hasDetails && (
-        <button
-          onClick={() => setExpanded((e) => !e)}
-          className="flex items-center gap-xs px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
-        >
-          <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
-          <span className="material-symbols-outlined text-sm">
-            {expanded ? "expand_less" : "expand_more"}
-          </span>
-        </button>
-      )}
+      <button
+        onClick={() => setExpanded((e) => !e)}
+        className="flex items-center gap-xs px-md pb-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
+      >
+        <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
+        <span className="material-symbols-outlined text-sm">
+          {expanded ? "close" : "chevron_left"}
+        </span>
+      </button>
 
-      {/* ── Accordion content ─────────────────────────────────────────── */}
-      {expanded && (
-        <div className="border-t border-outline-variant/20 px-md pt-sm pb-md space-y-md text-right">
+      {/* ── Details drawer (slides in from the side instead of pushing content down) ── */}
+      <SideDrawer
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title={item.title_he || "פרטים נוספים"}
+      >
+        <div className="space-y-md">
+
+          {/* Full status selector — the only place status can be changed */}
+          <div>
+            <p className="font-label-md text-label-md text-on-surface mb-xs">סטטוס</p>
+            <select
+              value={item.status}
+              disabled={saving}
+              onChange={(e) => onStatusChange(item, e.target.value)}
+              className="w-full px-3 py-1.5 rounded-full border border-outline-variant font-label-sm text-label-sm bg-white text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
 
           {/* Description */}
           {item.summary && (
@@ -144,7 +132,7 @@ export default function TaskCard({ item, onStatusChange, saving }) {
             </div>
           )}
 
-          {/* Footer: detail page link (status dropdown now lives in the header) */}
+          {/* Footer: detail page link */}
           <div className="flex items-center pt-sm border-t border-outline-variant/20">
             <button
               onClick={() => navigate(`/item/${item.item_type}/${item.item_id}`)}
@@ -155,7 +143,7 @@ export default function TaskCard({ item, onStatusChange, saving }) {
             </button>
           </div>
         </div>
-      )}
+      </SideDrawer>
     </div>
   );
 }
