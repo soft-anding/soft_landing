@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 // ── Shared style tokens ───────────────────────────────────────────────────────
 const field  = "mb-md";
@@ -23,6 +24,7 @@ const COMPANIONS_OPTIONS = [
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function OnboardingStep1() {
   const { form, setForm } = useOutletContext();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
 
@@ -129,7 +131,15 @@ export default function OnboardingStep1() {
       </div>
 
       {/* Footer */}
-      <div className="flex justify-end mt-lg pt-md border-t border-surface-variant/30">
+      <div className="flex justify-between items-center mt-lg pt-md border-t border-surface-variant/30">
+        <button
+          type="button"
+          onClick={async () => { await signOut(); navigate("/"); }}
+          className="font-label-md text-label-md text-primary flex items-center gap-xs hover:underline"
+        >
+          <span className="material-symbols-outlined text-base">arrow_forward</span>
+          חזרה
+        </button>
         <button
           type="submit"
           className="bg-primary text-on-primary px-lg py-sm rounded-full font-label-md text-label-md hover:bg-primary/90 active:scale-95 transition-all duration-200 flex items-center gap-xs"
