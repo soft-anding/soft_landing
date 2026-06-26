@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import ProfileDrawer from "./ProfileDrawer";
 
 function BellIcon({ className }) {
   return (
@@ -16,7 +17,8 @@ function BellIcon({ className }) {
 export default function AppHeader() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen]       = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export default function AppHeader() {
   }, [menuOpen]);
 
   return (
+    <>
     <header className="fixed top-0 right-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm">
       <nav className="w-full px-gutter py-sm flex justify-between items-center h-16">
         <button
@@ -72,6 +75,7 @@ export default function AppHeader() {
               <div className="absolute left-0 top-full mt-xs w-40 bg-white rounded-sm soft-shadow border border-outline-variant/30 overflow-hidden text-right">
                 <button
                   type="button"
+                  onClick={() => { setMenuOpen(false); setProfileOpen(true); }}
                   className="w-full px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-outline-variant/10 transition-colors text-right border-b border-outline-variant/30"
                 >
                   הפרופיל שלי
@@ -89,5 +93,8 @@ export default function AppHeader() {
         </div>
       </nav>
     </header>
+
+    <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
+    </>
   );
 }

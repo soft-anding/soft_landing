@@ -12,7 +12,7 @@ const DEMO_PROFILE = { id: "demo-user" };
 async function loadProfile(userId) {
   const { data } = await supabase
     .from("user_profiles")
-    .select("id,full_name,move_date,destination_city,interest_categories")
+    .select("*")
     .eq("id", userId)
     .maybeSingle();
   return data ?? false; // false = authenticated but no profile row (or table error)
