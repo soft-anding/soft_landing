@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from ..auth import CurrentUser, get_current_user
-from ..catalog_service import fetch_catalog, fetch_user_status_map
+from ..catalog_service import fetch_catalog, fetch_single_item, fetch_user_status_map
 from ..constants import DEFAULT_STATUS, DONE_STATUS, ITEM_TYPES, STATUSES
 from ..schemas import Item, ProgressSummary, StatusUpdate
 from ..supabase_client import get_supabase
@@ -37,14 +37,7 @@ def set_status(
     ).execute()
 
     # Return the updated catalog item so the client can refresh in place.
-    item = next(
-        (
-            i
-            for i in fetch_catalog()
-            if i["item_type"] == item_type and i["item_id"] == item_id
-        ),
-        None,
-    )
+    item = fetch_single_item(item_type, item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found in catalog.")
     return Item(

@@ -111,6 +111,44 @@ def fetch_catalog(city_slug: str | None = None) -> list[dict]:
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
 
 
+def fetch_single_item(item_type: str, item_id: int) -> dict | None:
+    """Fetch and normalize exactly one catalog item by id.
+
+    Used after a status update, where pulling the entire catalog (both
+    tables, every row) just to find the one changed row made every status
+    change noticeably slow.
+    """
+    sb = get_supabase()
+    if item_type == "moving_task":
+        rows = (
+            sb.table("moving_tasks")
+            .select("id,title,title_he,summary,action_steps,related_links,category,source_url")
+            .eq("id", item_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        return _normalize_task(rows[0]) if rows else None
+
+    if item_type == "rights_item":
+        rows = (
+            sb.table("rights_items")
+            .select(
+                "id,title,title_he,description,eligibility_conditions,required_documents,"
+                "discount_amount,deadlines,category,source_url"
+            )
+            .eq("id", item_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        return _normalize_right(rows[0]) if rows else None
+
+    return None
+
+
 def fetch_user_status_map(user_id: str) -> dict[tuple[str, int], dict]:
     """Map of (item_type, item_id) -> {status, notes, next_action} for one user."""
     sb = get_supabase()
