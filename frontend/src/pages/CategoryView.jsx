@@ -52,6 +52,23 @@ export default function CategoryView() {
     }
   };
 
+  const handleDeadlineChange = async (item, deadlineData) => {
+    const key = `${item.item_type}:${item.item_id}`;
+    setSavingId(key);
+    try {
+      const updated = await api.setDeadline(item.item_type, item.item_id, deadlineData);
+      setItems((prev) =>
+        prev.map((it) =>
+          it.item_type === item.item_type && it.item_id === item.item_id ? updated : it
+        )
+      );
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const label = items[0]?.category_label || "קטגוריה";
 
   return (
@@ -86,6 +103,7 @@ export default function CategoryView() {
               item={item}
               saving={savingId === `${item.item_type}:${item.item_id}`}
               onStatusChange={handleStatusChange}
+              onDeadlineChange={handleDeadlineChange}
             />
           ))}
         </div>

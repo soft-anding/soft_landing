@@ -9,10 +9,26 @@ from ..catalog_service import (
     fetch_user_status_map,
 )
 from ..constants import DEFAULT_STATUS, DONE_STATUS, STATUSES
-from ..schemas import CustomTaskCreate, Item, ProgressSummary, StatusUpdate
+from ..schemas import CustomTaskCreate, DeadlineUpdate, Item, ProgressSummary, StatusUpdate
 from ..supabase_client import get_supabase
 
 router = APIRouter(tags=["tracking"])
+
+
+def _get_current_deadline(sb, user_id: str, item_type: str, item_id: int) -> dict:
+    """Return the current deadline fields from user_item_status, or {} if no row exists."""
+    rows = (
+        sb.table("user_item_status")
+        .select("deadline_type,deadline_date")
+        .eq("user_id", user_id)
+        .eq("item_type", item_type)
+        .eq("item_id", item_id)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    return rows[0] if rows else {}
 
 
 @router.put("/items/{item_type}/{item_id}/status", response_model=Item)
@@ -29,6 +45,8 @@ def set_status(
         )
 
     sb = get_supabase()
+    current_deadline = _get_current_deadline(sb, user.id, item_type, item_id)
+
     row = {
         "user_id": user.id,
         "item_type": item_type,
@@ -36,6 +54,8 @@ def set_status(
         "status": payload.status,
         "notes": payload.notes,
         "next_action": payload.next_action,
+        "deadline_type": current_deadline.get("deadline_type"),
+        "deadline_date": current_deadline.get("deadline_date"),
     }
     sb.table("user_item_status").upsert(
         row, on_conflict="user_id,item_type,item_id"
@@ -49,6 +69,64 @@ def set_status(
         status=payload.status,
         notes=payload.notes,
         next_action=payload.next_action,
+        deadline_type=current_deadline.get("deadline_type"),
+        deadline_date=str(current_deadline["deadline_date"]) if current_deadline.get("deadline_date") else None,
+    )
+
+
+@router.put("/items/{item_type}/{item_id}/deadline", response_model=Item)
+def set_deadline(
+    payload: DeadlineUpdate,
+    item_type: str = Path(..., pattern="^(moving_task|rights_item|custom_task)$"),
+    item_id: int = Path(..., ge=1),
+    user: CurrentUser = Depends(get_current_user),
+) -> Item:
+    if payload.deadline_type == "specific_date" and not payload.deadline_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="deadline_date is required when deadline_type is 'specific_date'",
+        )
+
+    sb = get_supabase()
+
+    # Fetch current status to preserve it in the upsert.
+    existing = (
+        sb.table("user_item_status")
+        .select("status,notes,next_action")
+        .eq("user_id", user.id)
+        .eq("item_type", item_type)
+        .eq("item_id", item_id)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    current = existing[0] if existing else {}
+
+    row = {
+        "user_id": user.id,
+        "item_type": item_type,
+        "item_id": item_id,
+        "status": current.get("status", DEFAULT_STATUS),
+        "notes": current.get("notes"),
+        "next_action": current.get("next_action"),
+        "deadline_type": payload.deadline_type,
+        "deadline_date": payload.deadline_date,
+    }
+    sb.table("user_item_status").upsert(
+        row, on_conflict="user_id,item_type,item_id"
+    ).execute()
+
+    item = fetch_single_item(item_type, item_id, user_id=user.id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found.")
+    return Item(
+        **item,
+        status=current.get("status", DEFAULT_STATUS),
+        notes=current.get("notes"),
+        next_action=current.get("next_action"),
+        deadline_type=payload.deadline_type,
+        deadline_date=payload.deadline_date,
     )
 
 

@@ -75,7 +75,147 @@ function StatusPicker({ item, onStatusChange, saving }) {
   );
 }
 
-export default function TaskCard({ item, onStatusChange, saving }) {
+// ── Deadline labels ────────────────────────────────────────────────────────────
+const DEADLINE_OPTIONS = [
+  { type: "before_move", label: "לפני המעבר" },
+  { type: "move_day",    label: "יום המעבר"  },
+  { type: "after_move",  label: "אחרי המעבר" },
+];
+
+function deadlineLabel(item) {
+  if (!item.deadline_type) return null;
+  if (item.deadline_type === "specific_date") return item.deadline_date || "תאריך";
+  return DEADLINE_OPTIONS.find((o) => o.type === item.deadline_type)?.label ?? null;
+}
+
+// ── Inline deadline picker ─────────────────────────────────────────────────────
+function DeadlinePicker({ item, onDeadlineChange, saving }) {
+  const [open, setOpen]               = useState(false);
+  const [showDate, setShowDate]       = useState(false);
+  const [dateInput, setDateInput]     = useState("");
+  const ref = useRef(null);
+
+  // Close the popover when clicking outside.
+  useEffect(() => {
+    if (!open) return;
+    function onOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [open]);
+
+  // Reset inner state whenever the popover closes.
+  useEffect(() => {
+    if (!open) {
+      setShowDate(false);
+      setDateInput("");
+    }
+  }, [open]);
+
+  const label = deadlineLabel(item);
+
+  function handleToggle() {
+    if (!saving) setOpen((o) => !o);
+  }
+
+  function handleSelectPreset(type) {
+    setOpen(false);
+    onDeadlineChange(item, { deadline_type: type, deadline_date: null });
+  }
+
+  function handleSelectDate() {
+    setShowDate(true);
+    setDateInput(item.deadline_type === "specific_date" ? (item.deadline_date || "") : "");
+  }
+
+  function handleConfirmDate() {
+    if (!dateInput) return;
+    setOpen(false);
+    onDeadlineChange(item, { deadline_type: "specific_date", deadline_date: dateInput });
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      {/* Trigger badge */}
+      <button
+        onClick={handleToggle}
+        disabled={saving}
+        className={`flex items-center gap-xs font-label-sm text-label-sm transition-colors
+          ${label ? "text-primary hover:text-primary/70" : "text-on-surface-variant hover:text-primary"}
+          ${saving ? "opacity-60 cursor-wait" : "cursor-pointer"}`}
+      >
+        <span className="material-symbols-outlined text-base">schedule</span>
+        <span>{saving ? "…" : (label || "הוסף מועד")}</span>
+        <span className="material-symbols-outlined" style={{ fontSize: "0.9rem", lineHeight: 1 }}>
+          {open ? "expand_less" : "expand_more"}
+        </span>
+      </button>
+
+      {/* Dropdown — pops upward from the card bottom */}
+      {open && (
+        <div className="absolute bottom-full mb-2 left-0 z-50 bg-white rounded-xl border border-outline-variant/30 shadow-lg overflow-hidden min-w-[10rem]">
+          {!showDate ? (
+            <>
+              {DEADLINE_OPTIONS.map(({ type, label: optLabel }) => (
+                <button
+                  key={type}
+                  onClick={() => handleSelectPreset(type)}
+                  className={`w-full flex items-center px-md py-xs font-label-sm text-label-sm text-right transition-colors
+                    ${item.deadline_type === type
+                      ? "bg-primary-container/20 text-primary font-semibold"
+                      : "text-on-surface hover:bg-surface-container"}`}
+                >
+                  {optLabel}
+                </button>
+              ))}
+              <button
+                onClick={handleSelectDate}
+                className={`w-full flex items-center gap-xs px-md py-xs font-label-sm text-label-sm text-right transition-colors border-t border-outline-variant/20
+                  ${item.deadline_type === "specific_date"
+                    ? "bg-primary-container/20 text-primary font-semibold"
+                    : "text-on-surface hover:bg-surface-container"}`}
+              >
+                <span className="material-symbols-outlined text-sm">calendar_month</span>
+                {item.deadline_type === "specific_date" && item.deadline_date
+                  ? item.deadline_date
+                  : "בחר תאריך…"}
+              </button>
+            </>
+          ) : (
+            <div className="px-md py-sm flex flex-col gap-xs min-w-[13rem]">
+              <p className="font-label-sm text-label-sm text-on-surface-variant">בחר תאריך:</p>
+              <input
+                type="date"
+                value={dateInput}
+                onChange={(e) => setDateInput(e.target.value)}
+                autoFocus
+                className="border border-outline-variant rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+              />
+              <div className="flex gap-xs justify-between pt-xs">
+                <button
+                  onClick={() => setShowDate(false)}
+                  className="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors"
+                >
+                  חזור
+                </button>
+                <button
+                  onClick={handleConfirmDate}
+                  disabled={!dateInput}
+                  className="font-label-sm text-label-sm text-primary disabled:opacity-40 hover:text-primary/70 transition-colors"
+                >
+                  אישור
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function TaskCard({ item, onStatusChange, onDeadlineChange, saving }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
 
@@ -110,16 +250,23 @@ export default function TaskCard({ item, onStatusChange, saving }) {
         <StatusPicker item={item} onStatusChange={onStatusChange} saving={saving} />
       </div>
 
-      {/* ── Accordion toggle ──────────────────────────────────────────── */}
-      <button
-        onClick={() => setExpanded((e) => !e)}
-        className="flex items-center gap-xs px-md pb-md mt-auto font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
-      >
-        <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
-        <span className="material-symbols-outlined text-sm">
-          {expanded ? "close" : "chevron_left"}
-        </span>
-      </button>
+      {/* ── Card footer: deadline (left) + details toggle (right) ────── */}
+      <div className="flex items-center justify-between px-md pb-md mt-auto gap-md">
+        <DeadlinePicker
+          item={item}
+          onDeadlineChange={onDeadlineChange}
+          saving={saving}
+        />
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          className="flex items-center gap-xs font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors shrink-0"
+        >
+          <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
+          <span className="material-symbols-outlined text-sm">
+            {expanded ? "close" : "chevron_left"}
+          </span>
+        </button>
+      </div>
 
       {/* ── Details drawer ────────────────────────────────────────────── */}
       <SideDrawer
@@ -184,17 +331,6 @@ export default function TaskCard({ item, onStatusChange, saving }) {
                   </a>
                 ) : null;
               })}
-            </div>
-          )}
-
-          {/* Custom task: deadline badge */}
-          {item.is_custom && item.deadline_type && (
-            <div className="flex items-center gap-xs text-on-surface-variant font-label-sm text-label-sm">
-              <span className="material-symbols-outlined text-base">schedule</span>
-              {item.deadline_type === "before_move" && "לפני המעבר"}
-              {item.deadline_type === "move_day"    && "יום המעבר"}
-              {item.deadline_type === "after_move"  && "אחרי המעבר"}
-              {item.deadline_type === "specific_date" && item.deadline_date && item.deadline_date}
             </div>
           )}
 

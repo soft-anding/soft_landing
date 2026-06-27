@@ -35,6 +35,7 @@ def _normalize_task(row: dict) -> dict:
         "required_documents": [],
         "discount_amount": None,
         "deadlines": None,
+        "timeline_stage": row.get("timeline_stage"),
         # kept for server-side filtering in fetch_items_with_status; stripped by Item schema
         "_relevance_rule": row.get("relevance_rule"),
     }
@@ -173,7 +174,7 @@ def fetch_catalog(city_slug: str | None = None) -> list[dict]:
     """
     tasks = _fetch_table(
         "moving_tasks",
-        "id,title_he,summary,action_steps,related_links,category,source_url,relevance_rule",
+        "id,title_he,summary,action_steps,related_links,category,source_url,relevance_rule,timeline_stage",
     )
     rights = _fetch_rights_items(city_slug=city_slug)
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
@@ -205,7 +206,7 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
     if item_type == "moving_task":
         rows = (
             sb.table("moving_tasks")
-            .select("id,title_he,summary,action_steps,related_links,category,source_url")
+            .select("id,title_he,summary,action_steps,related_links,category,source_url,timeline_stage")
             .eq("id", item_id)
             .limit(1)
             .execute()
@@ -246,11 +247,11 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
 
 
 def fetch_user_status_map(user_id: str) -> dict[tuple[str, int], dict]:
-    """Map of (item_type, item_id) -> {status, notes, next_action} for one user."""
+    """Map of (item_type, item_id) -> {status, notes, next_action, deadline_type, deadline_date} for one user."""
     sb = get_supabase()
     rows = (
         sb.table("user_item_status")
-        .select("item_type,item_id,status,notes,next_action")
+        .select("item_type,item_id,status,notes,next_action,deadline_type,deadline_date")
         .eq("user_id", user_id)
         .execute()
         .data
@@ -289,11 +290,16 @@ def fetch_items_with_status(
                 continue
 
         st = status_map.get((item["item_type"], item["item_id"]))
+        # Deadline from user_item_status takes priority; fall back to custom task's own deadline.
+        st_deadline_type = st.get("deadline_type") if st else None
+        st_deadline_date = st.get("deadline_date") if st else None
         item = {
             **item,
             "status": st["status"] if st else DEFAULT_STATUS,
             "notes": st.get("notes") if st else None,
             "next_action": st.get("next_action") if st else None,
+            "deadline_type": st_deadline_type or item.get("deadline_type"),
+            "deadline_date": str(st_deadline_date) if st_deadline_date else item.get("deadline_date"),
         }
         items.append(item)
     return items

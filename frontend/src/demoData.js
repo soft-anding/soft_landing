@@ -247,4 +247,15 @@ export const demoApi = {
     }
     return delay({ ...it });
   },
+
+  setDeadline: (itemType, itemId, payload) => {
+    const it = ITEMS.find(
+      (x) => x.item_type === itemType && String(x.item_id) === String(itemId)
+    );
+    if (it) {
+      it.deadline_type = payload.deadline_type ?? null;
+      it.deadline_date = payload.deadline_date ?? null;
+    }
+    return delay({ ...it });
+  },
 };
