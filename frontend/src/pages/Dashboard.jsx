@@ -184,6 +184,9 @@ function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
 
     return (
       <div className="space-y-lg">
+        {/* Add task button sits above everything in State 2 too */}
+        {ADD_TASK_BUTTON(onAddTask)}
+
         {/* Pinned category box — same visual as overview boxes, with collapse chevron */}
         <CategorySummaryBox
           summary={pinnedSummary}
@@ -223,8 +226,6 @@ function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
             </div>
           </div>
         )}
-
-        {ADD_TASK_BUTTON(onAddTask)}
       </div>
     );
   }
@@ -232,6 +233,7 @@ function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
   // ── State 1: overview grid ────────────────────────────────────────────────
   return (
     <div className="space-y-lg">
+      {ADD_TASK_BUTTON(onAddTask)}
       <div className={`grid ${gridColsClass(summaries.length)} gap-md`}>
         {summaries.map((s) => (
           <CategorySummaryBox
@@ -241,7 +243,6 @@ function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
           />
         ))}
       </div>
-      {ADD_TASK_BUTTON(onAddTask)}
     </div>
   );
 }
