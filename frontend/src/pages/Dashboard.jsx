@@ -77,24 +77,61 @@ function DonutChart({ percentage, size = 68 }) {
 }
 
 // ── Single category summary box ───────────────────────────────────────────────
-function CategorySummaryBox({ summary, onClick }) {
+// When `onCollapse` is provided the box renders as a <div> (not a <button>) so we
+// can place a real <button> inside it for the collapse action without nesting issues.
+// When `compact` is true the box shrinks for the "other categories" row in State 2.
+function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
+  const chartSize = compact ? 44 : 68;
+  const pct = summary.percentage;
+
+  const inner = (
+    <>
+      <div className="flex items-center justify-center gap-xs w-full">
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            className="shrink-0 flex items-center text-primary hover:bg-primary-container/20 rounded-full p-xs transition-colors"
+            title="חזור לכל הקטגוריות"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: "1.1rem", lineHeight: 1 }}>
+              expand_less
+            </span>
+          </button>
+        )}
+        <span className={`font-label-md text-on-surface leading-snug ${compact ? "text-xs" : "text-label-md"}`}>
+          {summary.label}
+        </span>
+      </div>
+      <div className="relative my-xs">
+        <DonutChart percentage={pct} size={chartSize} />
+        <span
+          className="absolute inset-0 flex items-center justify-center font-semibold text-primary"
+          style={{ fontSize: compact ? "0.6rem" : "0.72rem" }}
+        >
+          {pct}%
+        </span>
+      </div>
+      {!compact && (
+        <span className="font-label-sm text-label-sm text-on-surface-variant">
+          {summary.completed} מתוך {summary.total}
+        </span>
+      )}
+    </>
+  );
+
+  if (onCollapse) {
+    return (
+      <div className="bg-white rounded-xl border-2 border-primary/40 soft-shadow flex flex-col items-center gap-sm p-md w-full text-center">
+        {inner}
+      </div>
+    );
+  }
   return (
     <button
       onClick={onClick}
-      className="group bg-white rounded-xl border border-outline-variant/30 soft-shadow flex flex-col items-center gap-sm p-md transition-all duration-150 hover:border-primary/50 hover:bg-surface-bright active:scale-[0.97] w-full text-center cursor-pointer"
+      className={`group bg-white rounded-xl border border-outline-variant/30 soft-shadow flex flex-col items-center gap-sm transition-all duration-150 hover:border-primary/50 hover:bg-surface-bright active:scale-[0.97] w-full text-center cursor-pointer ${compact ? "p-sm" : "p-md"}`}
     >
-      <span className="font-label-md text-label-md text-on-surface leading-snug">
-        {summary.label}
-      </span>
-      <div className="relative my-xs">
-        <DonutChart percentage={summary.percentage} size={68} />
-        <span className="absolute inset-0 flex items-center justify-center font-semibold text-primary" style={{ fontSize: "0.72rem" }}>
-          {summary.percentage}%
-        </span>
-      </div>
-      <span className="font-label-sm text-label-sm text-on-surface-variant">
-        {summary.completed} מתוך {summary.total}
-      </span>
+      {inner}
     </button>
   );
 }
@@ -108,11 +145,28 @@ function gridColsClass(n) {
   return GRID_COLS_CLASS[4];
 }
 
-// ── Tasks section — category overview grid (State 1) ─────────────────────────
-// State 2 (expanded single-category view) is wired up for the next iteration.
+const ADD_TASK_BUTTON = (onAddTask) => (
+  <button
+    onClick={onAddTask}
+    className="flex items-center gap-sm px-md py-sm rounded-xl border border-dashed border-primary/40 text-primary font-label-md text-label-md hover:border-primary hover:bg-primary-container/10 transition-colors w-full justify-center"
+  >
+    <span className="material-symbols-outlined text-base">add_circle</span>
+    הוסף משימה אישית
+  </button>
+);
+
+// ── Tasks section — State 1 (overview grid) + State 2 (expanded category) ────
 function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
-  const [expandedCategory, setExpandedCategory] = useState(null); // eslint-disable-line no-unused-vars
+  const [expandedCategory, setExpandedCategory] = useState(null);
+
+  // Re-derive summaries live from tasks so counts update when a task status changes.
   const summaries = getCategorySummaries(tasks);
+
+  // Always look up the pinned summary from the current summaries array so the
+  // donut chart and counts refresh after a status change without re-clicking.
+  const pinnedSummary = expandedCategory
+    ? (summaries.find((s) => s.category === expandedCategory.category) ?? expandedCategory)
+    : null;
 
   if (!summaries.length) {
     return (
@@ -122,9 +176,62 @@ function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
     );
   }
 
+  // ── State 2: expanded single-category view ───────────────────────────────
+  if (expandedCategory) {
+    const catKey = expandedCategory.category;
+    const catTasks = tasks.filter((t) => (t.category || "other") === catKey);
+    const otherSummaries = summaries.filter((s) => s.category !== catKey);
+
+    return (
+      <div className="space-y-lg">
+        {/* Pinned category box — same visual as overview boxes, with collapse chevron */}
+        <CategorySummaryBox
+          summary={pinnedSummary}
+          onCollapse={() => setExpandedCategory(null)}
+        />
+
+        {/* Task list for the selected category — reuses existing TaskCard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start">
+          {catTasks.map((item) => {
+            const id = `${item.item_type}:${item.item_id}`;
+            return (
+              <TaskCard
+                key={id}
+                item={item}
+                saving={savingId === id}
+                onStatusChange={onStatusChange}
+              />
+            );
+          })}
+        </div>
+
+        {/* Remaining categories — compact clickable row to switch category */}
+        {otherSummaries.length > 0 && (
+          <div>
+            <p className="font-label-sm text-label-sm text-on-surface-variant mb-sm text-right">
+              קטגוריות נוספות
+            </p>
+            <div className={`grid ${gridColsClass(otherSummaries.length)} gap-sm`}>
+              {otherSummaries.map((s) => (
+                <CategorySummaryBox
+                  key={s.category}
+                  summary={s}
+                  compact
+                  onClick={() => setExpandedCategory(s)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ADD_TASK_BUTTON(onAddTask)}
+      </div>
+    );
+  }
+
+  // ── State 1: overview grid ────────────────────────────────────────────────
   return (
     <div className="space-y-lg">
-      {/* Overview grid — one box per category */}
       <div className={`grid ${gridColsClass(summaries.length)} gap-md`}>
         {summaries.map((s) => (
           <CategorySummaryBox
@@ -134,15 +241,7 @@ function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
           />
         ))}
       </div>
-
-      {/* Add custom task */}
-      <button
-        onClick={onAddTask}
-        className="flex items-center gap-sm px-md py-sm rounded-xl border border-dashed border-primary/40 text-primary font-label-md text-label-md hover:border-primary hover:bg-primary-container/10 transition-colors w-full justify-center"
-      >
-        <span className="material-symbols-outlined text-base">add_circle</span>
-        הוסף משימה אישית
-      </button>
+      {ADD_TASK_BUTTON(onAddTask)}
     </div>
   );
 }
