@@ -145,19 +145,28 @@ function gridColsClass(n) {
   return GRID_COLS_CLASS[4];
 }
 
-const ADD_TASK_BUTTON = (onAddTask) => (
-  <button
-    onClick={onAddTask}
-    className="flex items-center gap-sm px-md py-sm rounded-xl border border-dashed border-primary/40 text-primary font-label-md text-label-md hover:border-primary hover:bg-primary-container/10 transition-colors w-full justify-center"
-  >
-    <span className="material-symbols-outlined text-base">add_circle</span>
-    הוסף משימה אישית
-  </button>
-);
+// ── Urgency sort helpers ──────────────────────────────────────────────────────
+const URGENCY_RANK = { before_move: 1, move_day: 2, after_move: 3 };
+
+function sortByUrgency(tasks) {
+  return [...tasks].sort((a, b) => {
+    const aHasDate = a.deadline_type === "specific_date" && a.deadline_date;
+    const bHasDate = b.deadline_type === "specific_date" && b.deadline_date;
+
+    if (aHasDate && bHasDate) return a.deadline_date.localeCompare(b.deadline_date);
+    if (aHasDate) return -1;
+    if (bHasDate) return 1;
+
+    const aStage = a.deadline_type || a.timeline_stage;
+    const bStage = b.deadline_type || b.timeline_stage;
+    return (URGENCY_RANK[aStage] ?? 4) - (URGENCY_RANK[bStage] ?? 4);
+  });
+}
 
 // ── Tasks section — State 1 (overview grid) + State 2 (expanded category) ────
 function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAddTask }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
+  const [urgencySort, setUrgencySort] = useState(false);
 
   // Re-derive summaries live from tasks so counts update when a task status changes.
   const summaries = getCategorySummaries(tasks);
@@ -168,11 +177,61 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
     ? (summaries.find((s) => s.category === expandedCategory.category) ?? expandedCategory)
     : null;
 
+  // ── Controls row — always visible ────────────────────────────────────────
+  const controls = (
+    <div className="flex items-center justify-between gap-md flex-wrap">
+      <button
+        onClick={onAddTask}
+        className="flex items-center gap-xs px-sm py-xs rounded-lg border border-dashed border-primary/40 text-primary font-label-sm text-label-sm hover:border-primary hover:bg-primary-container/10 transition-colors shrink-0"
+      >
+        <span className="material-symbols-outlined text-sm">add_circle</span>
+        הוסף משימה אישית
+      </button>
+      <button
+        onClick={() => { setUrgencySort((v) => !v); setExpandedCategory(null); }}
+        className={`flex items-center gap-xs px-sm py-xs rounded-lg border font-label-sm text-label-sm transition-all shrink-0
+          ${urgencySort
+            ? "bg-primary/10 text-primary border-primary/40 font-semibold"
+            : "text-on-surface-variant border-outline-variant/30 hover:text-primary hover:border-primary/40"}`}
+      >
+        <span className="material-symbols-outlined text-sm">sort</span>
+        מיין לפי דחיפות
+      </button>
+    </div>
+  );
+
   if (!summaries.length) {
     return (
-      <p className="font-body-md text-body-md text-on-surface-variant text-right">
-        עדיין אין משימות מעבר — נחזור בקרוב.
-      </p>
+      <div className="space-y-lg">
+        {controls}
+        <p className="font-body-md text-body-md text-on-surface-variant text-right">
+          עדיין אין משימות מעבר — נחזור בקרוב.
+        </p>
+      </div>
+    );
+  }
+
+  // ── Urgency sort view — flat sorted list ─────────────────────────────────
+  if (urgencySort) {
+    const sorted = sortByUrgency(tasks);
+    return (
+      <div className="space-y-lg">
+        {controls}
+        <div className="flex flex-col gap-md">
+          {sorted.map((item) => {
+            const id = `${item.item_type}:${item.item_id}`;
+            return (
+              <TaskCard
+                key={id}
+                item={item}
+                saving={savingId === id}
+                onStatusChange={onStatusChange}
+                onDeadlineChange={onDeadlineChange}
+              />
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
@@ -184,8 +243,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
 
     return (
       <div className="space-y-lg">
-        {/* Add task button sits above everything in State 2 too */}
-        {ADD_TASK_BUTTON(onAddTask)}
+        {controls}
 
         {/* Pinned category box — same visual as overview boxes, with collapse chevron */}
         <CategorySummaryBox
@@ -234,7 +292,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
   // ── State 1: overview grid ────────────────────────────────────────────────
   return (
     <div className="space-y-lg">
-      {ADD_TASK_BUTTON(onAddTask)}
+      {controls}
       <div className={`grid ${gridColsClass(summaries.length)} gap-md`}>
         {summaries.map((s) => (
           <CategorySummaryBox
