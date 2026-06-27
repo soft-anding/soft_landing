@@ -35,6 +35,8 @@ def _normalize_task(row: dict) -> dict:
         "required_documents": [],
         "discount_amount": None,
         "deadlines": None,
+        # kept for server-side filtering in fetch_items_with_status; stripped by Item schema
+        "_relevance_rule": row.get("relevance_rule"),
     }
 
 
@@ -109,7 +111,7 @@ def _fetch_rights_items(city_slug: str | None = None) -> list[dict]:
     # Do NOT add city_id to the SELECT — we only need it for filtering,
     # and PostgREST lets you filter by a column without returning it.
     query = sb.table("rights_items").select(
-        "id,title,title_he,description,eligibility_conditions,required_documents,"
+        "id,title_he,description,eligibility_conditions,required_documents,"
         "discount_amount,deadlines,category,source_url"
     )
     if not settings.show_unverified:
@@ -121,6 +123,48 @@ def _fetch_rights_items(city_slug: str | None = None) -> list[dict]:
     return query.execute().data or []
 
 
+def _fetch_user_profile(user_id: str) -> dict:
+    """Return the user_profiles row for user_id, or {} if no profile exists yet."""
+    sb = get_supabase()
+    rows = (
+        sb.table("user_profiles")
+        .select(
+            "has_car,needs_movers,moving_companions,occupation,"
+            "marital_status,income_range,special_eligibility,destination_city"
+        )
+        .eq("id", user_id)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    return rows[0] if rows else {}
+
+
+def _matches_relevance_rule(rule: dict | None, profile: dict) -> bool:
+    """Return True if every key in rule matches the corresponding user profile field.
+
+    - null / empty rule → always included (universal task)
+    - scalar value (bool/str) → exact match required
+    - list value → profile field must be one of the listed values
+    If the user has no profile yet (empty dict), tasks with any non-null rule
+    are excluded so they don't spam users who haven't filled in onboarding.
+    """
+    if not rule:
+        return True
+    if not profile:
+        return False
+    for key, expected in rule.items():
+        actual = profile.get(key)
+        if isinstance(expected, list):
+            if actual not in expected:
+                return False
+        else:
+            if actual != expected:
+                return False
+    return True
+
+
 def fetch_catalog(city_slug: str | None = None) -> list[dict]:
     """All catalog items (tasks + rights), normalized, without user status.
 
@@ -129,7 +173,7 @@ def fetch_catalog(city_slug: str | None = None) -> list[dict]:
     """
     tasks = _fetch_table(
         "moving_tasks",
-        "id,title,title_he,summary,action_steps,related_links,category,source_url",
+        "id,title_he,summary,action_steps,related_links,category,source_url,relevance_rule",
     )
     rights = _fetch_rights_items(city_slug=city_slug)
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
@@ -161,7 +205,7 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
     if item_type == "moving_task":
         rows = (
             sb.table("moving_tasks")
-            .select("id,title,title_he,summary,action_steps,related_links,category,source_url")
+            .select("id,title_he,summary,action_steps,related_links,category,source_url")
             .eq("id", item_id)
             .limit(1)
             .execute()
@@ -174,7 +218,7 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
         rows = (
             sb.table("rights_items")
             .select(
-                "id,title,title_he,description,eligibility_conditions,required_documents,"
+                "id,title_he,description,eligibility_conditions,required_documents,"
                 "discount_amount,deadlines,category,source_url"
             )
             .eq("id", item_id)
@@ -221,6 +265,7 @@ def fetch_items_with_status(
     item_type: str | None = None,
     city_slug: str | None = None,
 ) -> list[dict]:
+    profile = _fetch_user_profile(user_id)
     catalog = fetch_catalog(city_slug=city_slug)
     # Custom tasks appear whenever moving_task type is requested (or no filter)
     include_custom = item_type is None or item_type == "moving_task"
@@ -237,6 +282,11 @@ def fetch_items_with_status(
                 continue
         elif item_type and item["item_type"] != item_type:
             continue
+
+        # Exclude moving_tasks that don't match the user's profile
+        if item["item_type"] == "moving_task":
+            if not _matches_relevance_rule(item.get("_relevance_rule"), profile):
+                continue
 
         st = status_map.get((item["item_type"], item["item_id"]))
         item = {
