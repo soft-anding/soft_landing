@@ -1,14 +1,85 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { STATUSES, STATUS_ICON, statusStyle } from "../statusConfig";
 import SideDrawer from "./SideDrawer";
+
+// ── Inline status picker — click the badge to open a dropdown menu ────────────
+function StatusPicker({ item, onStatusChange, saving }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const isFilled = item.status === "הושלם";
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [open]);
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        onClick={() => !saving && setOpen((o) => !o)}
+        disabled={saving}
+        className={`
+          flex items-center gap-xs
+          px-3 py-1.5 rounded-full border
+          font-label-sm text-label-sm
+          ${statusStyle(item.status)}
+          ${saving ? "opacity-60 cursor-wait" : "cursor-pointer hover:opacity-90 active:scale-[0.97] transition-all"}
+        `}
+      >
+        <span
+          className="material-symbols-outlined text-base"
+          style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
+        >
+          {STATUS_ICON[item.status] || "radio_button_unchecked"}
+        </span>
+        {saving ? "…" : item.status}
+        <span className="material-symbols-outlined" style={{ fontSize: "1rem", lineHeight: 1 }}>
+          {open ? "expand_less" : "expand_more"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-1 left-0 z-50 bg-white rounded-xl border border-outline-variant/30 shadow-lg overflow-hidden min-w-max">
+          {STATUSES.map((s) => {
+            const current = s === item.status;
+            return (
+              <button
+                key={s}
+                onClick={() => { setOpen(false); if (!current) onStatusChange(item, s); }}
+                className={`
+                  w-full flex items-center gap-sm px-md py-xs
+                  font-label-sm text-label-sm text-right transition-colors
+                  ${current
+                    ? "bg-primary-container/20 text-primary font-semibold"
+                    : "text-on-surface hover:bg-surface-container"}
+                `}
+              >
+                <span
+                  className="material-symbols-outlined text-base shrink-0"
+                  style={{ fontVariationSettings: s === "הושלם" ? "'FILL' 1" : "'FILL' 0" }}
+                >
+                  {STATUS_ICON[s] || "radio_button_unchecked"}
+                </span>
+                {s}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TaskCard({ item, onStatusChange, saving }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
 
-  const done        = item.status === "הושלם";
-  const isFilled    = item.status === "הושלם"; // filled icon for done state
+  const done = item.status === "הושלם";
 
   return (
     <div
@@ -35,24 +106,8 @@ export default function TaskCard({ item, onStatusChange, saving }) {
           </h3>
         </div>
 
-        {/* Status badge — display only; changing status happens inside the details drawer */}
-        <span
-          title={`סטטוס: ${item.status}`}
-          className={`
-            shrink-0 flex items-center gap-xs
-            px-3 py-1.5 rounded-full border
-            font-label-sm text-label-sm
-            ${statusStyle(item.status)}
-          `}
-        >
-          <span
-            className="material-symbols-outlined text-base"
-            style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
-          >
-            {STATUS_ICON[item.status] || "radio_button_unchecked"}
-          </span>
-          {saving ? "…" : item.status}
-        </span>
+        {/* Status picker — click to open dropdown and change status inline */}
+        <StatusPicker item={item} onStatusChange={onStatusChange} saving={saving} />
       </div>
 
       {/* ── Accordion toggle ──────────────────────────────────────────── */}
@@ -66,7 +121,7 @@ export default function TaskCard({ item, onStatusChange, saving }) {
         </span>
       </button>
 
-      {/* ── Details drawer (slides in from the side instead of pushing content down) ── */}
+      {/* ── Details drawer ────────────────────────────────────────────── */}
       <SideDrawer
         open={expanded}
         onClose={() => setExpanded(false)}
@@ -74,7 +129,7 @@ export default function TaskCard({ item, onStatusChange, saving }) {
       >
         <div className="space-y-md">
 
-          {/* Full status selector — the only place status can be changed */}
+          {/* Status selector also in the drawer for completeness */}
           <div>
             <p className="font-label-md text-label-md text-on-surface mb-xs">סטטוס</p>
             <select
