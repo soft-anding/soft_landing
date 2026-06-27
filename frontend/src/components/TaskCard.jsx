@@ -82,17 +82,17 @@ const DEADLINE_OPTIONS = [
   { type: "after_move",  label: "אחרי המעבר" },
 ];
 
-function deadlineLabel(item) {
-  if (!item.deadline_type) return null;
-  if (item.deadline_type === "specific_date") return item.deadline_date || "תאריך";
-  return DEADLINE_OPTIONS.find((o) => o.type === item.deadline_type)?.label ?? null;
+function deadlineLabel(deadlineType, deadlineDate) {
+  if (!deadlineType) return null;
+  if (deadlineType === "specific_date") return deadlineDate || "תאריך";
+  return DEADLINE_OPTIONS.find((o) => o.type === deadlineType)?.label ?? null;
 }
 
 // ── Inline deadline picker ─────────────────────────────────────────────────────
 function DeadlinePicker({ item, onDeadlineChange, saving }) {
-  const [open, setOpen]               = useState(false);
-  const [showDate, setShowDate]       = useState(false);
-  const [dateInput, setDateInput]     = useState("");
+  const [open, setOpen]           = useState(false);
+  const [showDate, setShowDate]   = useState(false);
+  const [dateInput, setDateInput] = useState("");
   const ref = useRef(null);
 
   // Close the popover when clicking outside.
@@ -113,7 +113,13 @@ function DeadlinePicker({ item, onDeadlineChange, saving }) {
     }
   }, [open]);
 
-  const label = deadlineLabel(item);
+  // User-set deadline takes priority; fall back to catalog timeline_stage.
+  const userSet       = !!item.deadline_type;
+  const effectiveType = item.deadline_type || item.timeline_stage || null;
+  const label         = deadlineLabel(effectiveType, item.deadline_date);
+
+  // Which option is currently "active" in the dropdown (for highlight).
+  const activeType = item.deadline_type || item.timeline_stage || null;
 
   function handleToggle() {
     if (!saving) setOpen((o) => !o);
@@ -142,7 +148,7 @@ function DeadlinePicker({ item, onDeadlineChange, saving }) {
         onClick={handleToggle}
         disabled={saving}
         className={`flex items-center gap-xs font-label-sm text-label-sm transition-colors
-          ${label ? "text-primary hover:text-primary/70" : "text-on-surface-variant hover:text-primary"}
+          ${userSet ? "text-primary hover:text-primary/70" : label ? "text-on-surface-variant hover:text-primary" : "text-on-surface-variant/60 hover:text-primary"}
           ${saving ? "opacity-60 cursor-wait" : "cursor-pointer"}`}
       >
         <span className="material-symbols-outlined text-base">schedule</span>
@@ -157,18 +163,25 @@ function DeadlinePicker({ item, onDeadlineChange, saving }) {
         <div className="absolute bottom-full mb-2 left-0 z-50 bg-white rounded-xl border border-outline-variant/30 shadow-lg overflow-hidden min-w-[10rem]">
           {!showDate ? (
             <>
-              {DEADLINE_OPTIONS.map(({ type, label: optLabel }) => (
-                <button
-                  key={type}
-                  onClick={() => handleSelectPreset(type)}
-                  className={`w-full flex items-center px-md py-xs font-label-sm text-label-sm text-right transition-colors
-                    ${item.deadline_type === type
-                      ? "bg-primary-container/20 text-primary font-semibold"
-                      : "text-on-surface hover:bg-surface-container"}`}
-                >
-                  {optLabel}
-                </button>
-              ))}
+              {DEADLINE_OPTIONS.map(({ type, label: optLabel }) => {
+                const isActive  = activeType === type;
+                const isDefault = !item.deadline_type && item.timeline_stage === type;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => handleSelectPreset(type)}
+                    className={`w-full flex items-center justify-between px-md py-xs font-label-sm text-label-sm text-right transition-colors
+                      ${isActive
+                        ? "bg-primary-container/20 text-primary font-semibold"
+                        : "text-on-surface hover:bg-surface-container"}`}
+                  >
+                    <span>{optLabel}</span>
+                    {isDefault && (
+                      <span className="font-label-sm text-label-sm text-on-surface-variant/50 text-xs mr-sm">ברירת מחדל</span>
+                    )}
+                  </button>
+                );
+              })}
               <button
                 onClick={handleSelectDate}
                 className={`w-full flex items-center gap-xs px-md py-xs font-label-sm text-label-sm text-right transition-colors border-t border-outline-variant/20
