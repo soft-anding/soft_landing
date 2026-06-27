@@ -155,7 +155,7 @@ const ADD_TASK_BUTTON = (onAddTask) => (
 );
 
 // ── Tasks section — State 1 (overview grid) + State 2 (expanded category) ────
-function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
+function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAddTask }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
 
   // Re-derive summaries live from tasks so counts update when a task status changes.
@@ -202,6 +202,7 @@ function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
                 item={item}
                 saving={savingId === id}
                 onStatusChange={onStatusChange}
+                onDeadlineChange={onDeadlineChange}
               />
             );
           })}
@@ -422,6 +423,25 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeadlineChange = async (item, deadlineData) => {
+    const key = `${item.item_type}:${item.item_id}`;
+    setSavingId(key);
+    try {
+      const updated = await api.setDeadline(item.item_type, item.item_id, deadlineData);
+      setTasks((prev) => {
+        const next = prev.map((it) =>
+          it.item_type === updated.item_type && it.item_id === updated.item_id ? updated : it
+        );
+        writeCache(cacheKey, { progress, tasks: next, rights });
+        return next;
+      });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <AppHeader />
@@ -477,6 +497,7 @@ export default function Dashboard() {
               <TasksSection
                 tasks={tasks}
                 onStatusChange={handleStatusChange}
+                onDeadlineChange={handleDeadlineChange}
                 savingId={savingId}
                 onAddTask={() => setShowAddTask(true)}
               />

@@ -28,6 +28,8 @@ class Item(BaseModel):
     required_documents: list[Any] = Field(default_factory=list)
     discount_amount: str | None = None
     deadlines: str | None = None
+    # catalog-level timeline hint (moving_tasks only, read-only)
+    timeline_stage: str | None = None
     # custom_task extras
     deadline_type: str | None = None
     deadline_date: str | None = None
@@ -52,6 +54,11 @@ class StatusUpdate(BaseModel):
     status: str
     notes: str | None = None
     next_action: str | None = None
+
+
+class DeadlineUpdate(BaseModel):
+    deadline_type: Literal["before_move", "move_day", "after_move", "specific_date"] | None = None
+    deadline_date: str | None = None  # ISO date string, required when deadline_type='specific_date'
 
 
 class ProgressSummary(BaseModel):
