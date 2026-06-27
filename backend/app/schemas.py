@@ -32,6 +32,8 @@ class Item(BaseModel):
     deadline_type: str | None = None
     deadline_date: str | None = None
     is_custom: bool = False
+    # population tags (derived from registration profile)
+    tags: list[str] = Field(default_factory=list)
     # per-user tracking
     status: str = STATUSES[0]
     notes: str | None = None

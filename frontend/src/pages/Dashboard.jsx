@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import AppHeader from "../components/AppHeader";
-import AskBox from "../components/AskBox";
 import AddCustomTaskModal from "../components/AddCustomTaskModal";
 import ProgressTimeline from "../components/ProgressTimeline";
 import SideDrawer from "../components/SideDrawer";
@@ -508,10 +507,6 @@ export default function Dashboard() {
               )}
             </section>
 
-            <AskBox
-              profile={{}}
-              seedQuery="מהן הזכויות וההנחות הרלוונטיות לי כמי שעובר/ת דירה?"
-            />
           </>
         )}
       </main>

@@ -15,9 +15,8 @@ class Settings(BaseSettings):
     # "review then publish" workflow). Defaults to true so the MVP shows the seeded data.
     show_unverified: bool = True
 
-    # RAG pipeline
-    voyage_api_key:    str = ""   # Voyage AI — for embedding queries and documents
-    anthropic_api_key: str = ""   # Anthropic Claude — for answer synthesis
+    # AI agents (Claude)
+    anthropic_api_key: str = ""   # Anthropic Claude — for form expert + task planning agents
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

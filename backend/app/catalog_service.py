@@ -35,6 +35,7 @@ def _normalize_task(row: dict) -> dict:
         "required_documents": [],
         "discount_amount": None,
         "deadlines": None,
+        "tags": _as_list(row.get("tags")),
     }
 
 
@@ -56,6 +57,7 @@ def _normalize_custom_task(row: dict) -> dict:
         "deadline_type": row.get("deadline_type"),
         "deadline_date": str(row["deadline_date"]) if row.get("deadline_date") else None,
         "is_custom": True,
+        "tags": [],  # custom tasks have no population filter — always shown
     }
 
 
@@ -74,6 +76,7 @@ def _normalize_right(row: dict) -> dict:
         "required_documents": _as_list(row.get("required_documents")),
         "discount_amount": row.get("discount_amount"),
         "deadlines": row.get("deadlines"),
+        "tags": _as_list(row.get("tags")),
     }
 
 
@@ -110,7 +113,7 @@ def _fetch_rights_items(city_slug: str | None = None) -> list[dict]:
     # and PostgREST lets you filter by a column without returning it.
     query = sb.table("rights_items").select(
         "id,title,title_he,description,eligibility_conditions,required_documents,"
-        "discount_amount,deadlines,category,source_url"
+        "discount_amount,deadlines,category,source_url,tags"
     )
     if not settings.show_unverified:
         query = query.eq("verified", True)
@@ -129,7 +132,7 @@ def fetch_catalog(city_slug: str | None = None) -> list[dict]:
     """
     tasks = _fetch_table(
         "moving_tasks",
-        "id,title,title_he,summary,action_steps,related_links,category,source_url",
+        "id,title,title_he,summary,action_steps,related_links,category,source_url,tags",
     )
     rights = _fetch_rights_items(city_slug=city_slug)
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
@@ -161,7 +164,7 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
     if item_type == "moving_task":
         rows = (
             sb.table("moving_tasks")
-            .select("id,title,title_he,summary,action_steps,related_links,category,source_url")
+            .select("id,title,title_he,summary,action_steps,related_links,category,source_url,tags")
             .eq("id", item_id)
             .limit(1)
             .execute()
@@ -175,7 +178,7 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
             sb.table("rights_items")
             .select(
                 "id,title,title_he,description,eligibility_conditions,required_documents,"
-                "discount_amount,deadlines,category,source_url"
+                "discount_amount,deadlines,category,source_url,tags"
             )
             .eq("id", item_id)
             .limit(1)
@@ -199,6 +202,45 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
         return _normalize_custom_task(rows[0]) if rows else None
 
     return None
+
+
+def _fetch_user_profile(user_id: str) -> dict | None:
+    """Return the user_profiles row for filtering by population tags."""
+    try:
+        sb = get_supabase()
+        rows = (
+            sb.table("user_profiles")
+            .select("special_eligibility,has_car,needs_movers,moving_companions")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        return rows[0] if rows else None
+    except Exception:
+        return None
+
+
+def _profile_tags(profile: dict | None) -> set[str]:
+    """Derive the set of population tags for a user from their profile.
+
+    'general' is always included so items that apply to everyone are visible.
+    When profile is missing, only general items are shown.
+    """
+    tags: set[str] = {"general"}
+    if not profile:
+        return tags
+    for eligibility in (profile.get("special_eligibility") or []):
+        tags.add(eligibility)
+    if profile.get("has_car"):
+        tags.add("has_car")
+    if profile.get("needs_movers"):
+        tags.add("needs_movers")
+    companions = profile.get("moving_companions")
+    if companions:
+        tags.add(companions)  # value matches tag: 'alone', 'with_family', etc.
+    return tags
 
 
 def fetch_user_status_map(user_id: str) -> dict[tuple[str, int], dict]:
@@ -226,6 +268,10 @@ def fetch_items_with_status(
     include_custom = item_type is None or item_type == "moving_task"
     custom_items = fetch_user_custom_tasks(user_id) if include_custom else []
 
+    # Tag-based filtering: load user profile once and derive their tag set
+    profile = _fetch_user_profile(user_id)
+    user_tags = _profile_tags(profile)
+
     status_map = fetch_user_status_map(user_id)
     items: list[dict] = []
     for item in catalog + custom_items:
@@ -236,6 +282,12 @@ def fetch_items_with_status(
             if item["item_type"] not in _TASK_TYPES:
                 continue
         elif item_type and item["item_type"] != item_type:
+            continue
+
+        # Tag filter: skip items whose tag set has no overlap with the user's tags.
+        # Items with no tags (e.g. custom_task) are always shown.
+        item_tags = set(item.get("tags") or [])
+        if item_tags and not item_tags & user_tags:
             continue
 
         st = status_map.get((item["item_type"], item["item_id"]))

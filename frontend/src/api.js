@@ -55,9 +55,6 @@ const realApi = {
 
   createCustomTask: (payload) =>
     request("/custom-tasks", { method: "POST", body: payload }),
-
-  ask: (payload) =>
-    request("/ask", { method: "POST", body: payload }),
 };
 
 // In demo mode, serve mock data with no backend (see demo.js / demoData.js).
