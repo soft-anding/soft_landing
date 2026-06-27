@@ -34,50 +34,108 @@ function writeCache(key, data) {
   }
 }
 
-// ── Group a flat item list by category ───────────────────────────────────────
-function groupByCategory(items) {
+// ── Derive per-category totals + completion counts from the tasks array ───────
+function getCategorySummaries(tasks) {
   const map = {};
-  for (const item of items) {
+  for (const item of tasks) {
     const key = item.category || "other";
-    if (!map[key]) map[key] = { key, label: item.category_label || "אחר", items: [] };
-    map[key].items.push(item);
+    if (!map[key]) {
+      map[key] = { category: key, label: item.category_label || "אחר", total: 0, completed: 0 };
+    }
+    map[key].total++;
+    if (item.status === "הושלם") map[key].completed++;
   }
-  return Object.values(map);
+  return Object.values(map).map((g) => ({
+    ...g,
+    percentage: g.total > 0 ? Math.round((g.completed / g.total) * 100) : 0,
+  }));
 }
 
-// ── Tasks section — all moving_tasks + custom_tasks, grouped by category ─────
+// ── Inline SVG donut/ring chart ───────────────────────────────────────────────
+function DonutChart({ percentage, size = 68 }) {
+  const stroke = 7;
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const arc = Math.min(Math.max(percentage, 0), 100);
+  const dash = (arc / 100) * circ;
+  const c = size / 2;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+      <circle cx={c} cy={c} r={r} fill="none" stroke="#d0ebe2" strokeWidth={stroke} />
+      {arc > 0 && (
+        <circle
+          cx={c} cy={c} r={r} fill="none"
+          stroke="#3e6658"
+          strokeWidth={stroke}
+          strokeDasharray={`${dash} ${circ}`}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${c} ${c})`}
+        />
+      )}
+    </svg>
+  );
+}
+
+// ── Single category summary box ───────────────────────────────────────────────
+function CategorySummaryBox({ summary, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="group bg-white rounded-xl border border-outline-variant/30 soft-shadow flex flex-col items-center gap-sm p-md transition-all duration-150 hover:border-primary/50 hover:bg-surface-bright active:scale-[0.97] w-full text-center cursor-pointer"
+    >
+      <span className="font-label-md text-label-md text-on-surface leading-snug">
+        {summary.label}
+      </span>
+      <div className="relative my-xs">
+        <DonutChart percentage={summary.percentage} size={68} />
+        <span className="absolute inset-0 flex items-center justify-center font-semibold text-primary" style={{ fontSize: "0.72rem" }}>
+          {summary.percentage}%
+        </span>
+      </div>
+      <span className="font-label-sm text-label-sm text-on-surface-variant">
+        {summary.completed} מתוך {summary.total}
+      </span>
+    </button>
+  );
+}
+
+// Tailwind needs to see the full class names at build time, so keep the map static.
+const GRID_COLS_CLASS = { 1: "grid-cols-1", 2: "grid-cols-2", 3: "grid-cols-3", 4: "grid-cols-4" };
+function gridColsClass(n) {
+  if (n <= 3) return GRID_COLS_CLASS[n] ?? GRID_COLS_CLASS[3]; // 1, 2, or 3 → exact fit in one row
+  if (n === 4) return GRID_COLS_CLASS[2];                      // 2×2
+  if (n <= 9) return GRID_COLS_CLASS[3];                       // up to 3 rows of 3
+  return GRID_COLS_CLASS[4];
+}
+
+// ── Tasks section — category overview grid (State 1) ─────────────────────────
+// State 2 (expanded single-category view) is wired up for the next iteration.
 function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
-  const groups = groupByCategory(tasks);
+  const [expandedCategory, setExpandedCategory] = useState(null); // eslint-disable-line no-unused-vars
+  const summaries = getCategorySummaries(tasks);
+
+  if (!summaries.length) {
+    return (
+      <p className="font-body-md text-body-md text-on-surface-variant text-right">
+        עדיין אין משימות מעבר — נחזור בקרוב.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-lg">
-      {!groups.length && (
-        <p className="font-body-md text-body-md text-on-surface-variant text-right">
-          עדיין אין משימות מעבר — נחזור בקרוב.
-        </p>
-      )}
-      {groups.map((g) => (
-        <div key={g.key}>
-          <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md text-right flex items-center gap-sm">
-            <span className="w-1 h-5 bg-primary rounded-full inline-block" />
-            {g.label}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start">
-            {g.items.map((item) => {
-              const id = `${item.item_type}:${item.item_id}`;
-              return (
-                <TaskCard
-                  key={id}
-                  item={item}
-                  saving={savingId === id}
-                  onStatusChange={onStatusChange}
-                />
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      {/* Add task button — always at the bottom of the tasks section */}
+      {/* Overview grid — one box per category */}
+      <div className={`grid ${gridColsClass(summaries.length)} gap-md`}>
+        {summaries.map((s) => (
+          <CategorySummaryBox
+            key={s.category}
+            summary={s}
+            onClick={() => setExpandedCategory(s)}
+          />
+        ))}
+      </div>
+
+      {/* Add custom task */}
       <button
         onClick={onAddTask}
         className="flex items-center gap-sm px-md py-sm rounded-xl border border-dashed border-primary/40 text-primary font-label-md text-label-md hover:border-primary hover:bg-primary-container/10 transition-colors w-full justify-center"
