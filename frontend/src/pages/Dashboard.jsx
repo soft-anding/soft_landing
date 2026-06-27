@@ -4,6 +4,7 @@ import AddCustomTaskModal from "../components/AddCustomTaskModal";
 import ProgressTimeline from "../components/ProgressTimeline";
 import SideDrawer from "../components/SideDrawer";
 import Spinner from "../components/Spinner";
+import TaskAgentChat, { TaskAgentFab } from "../components/TaskAgentChat";
 import TaskCard from "../components/TaskCard";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
@@ -184,6 +185,7 @@ function sortByUrgency(tasks) {
 function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAddTask }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [urgencySort, setUrgencySort] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
 
   // Re-derive summaries live from tasks so counts update when a task status changes.
   const summaries = getCategorySummaries(tasks);
@@ -196,25 +198,29 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
 
   // ── Controls row — always visible ────────────────────────────────────────
   const controls = (
+    <>
     <div className="flex items-center justify-between gap-md flex-wrap">
       <button
         onClick={onAddTask}
-        className="flex items-center gap-xs px-sm py-xs rounded-lg border border-dashed border-primary/40 text-primary font-label-sm text-label-sm hover:border-primary hover:bg-primary-container/10 transition-colors shrink-0"
+        className="flex items-center gap-xs px-md py-sm rounded-lg border border-green-600/30 text-green-700 font-label-sm text-label-sm hover:border-green-600/60 hover:bg-green-50 transition-colors shrink-0"
       >
         <span className="material-symbols-outlined text-sm">add_circle</span>
         הוסף משימה אישית
       </button>
       <button
         onClick={() => { setUrgencySort((v) => !v); setExpandedCategory(null); }}
-        className={`flex items-center gap-xs px-sm py-xs rounded-lg border font-label-sm text-label-sm transition-all shrink-0
+        className={`flex items-center gap-xs px-md py-sm rounded-lg border font-label-sm text-label-sm transition-all shrink-0
           ${urgencySort
-            ? "bg-primary/10 text-primary border-primary/40 font-semibold"
-            : "text-on-surface-variant border-outline-variant/30 hover:text-primary hover:border-primary/40"}`}
+            ? "bg-green-50 text-green-700 border-green-600/60 font-semibold"
+            : "text-on-surface-variant border-green-600/30 hover:text-green-700 hover:border-green-600/60"}`}
       >
         <span className="material-symbols-outlined text-sm">{urgencySort ? "grid_view" : "sort"}</span>
         {urgencySort ? "חזרה לתצוגת קטגוריות" : "מיין לפי דחיפות"}
       </button>
     </div>
+    {!agentOpen && <TaskAgentFab onClick={() => setAgentOpen(true)} />}
+    <TaskAgentChat open={agentOpen} onClose={() => setAgentOpen(false)} />
+    </>
   );
 
   if (!summaries.length) {
