@@ -341,21 +341,18 @@ async function main() {
 
   const rows = tasks.map(t => ({
     source: 'manual',
-    title: t.title,
+    title_he: t.title,
     summary: t.summary,
     action_steps: t.action_steps,
     category: t.category,
-    relevance_rule: t.relevance_rule,
-    is_niche: t.is_niche,
-    timeline_stage: t.timeline_stage,
     source_url: null,
     verified: false,
   }));
 
   const { data, error } = await sb
     .from('moving_tasks')
-    .upsert(rows, { onConflict: 'source,title' })
-    .select('id, title');
+    .upsert(rows, { onConflict: 'source,title_he' })
+    .select('id, title_he');
 
   if (error) {
     console.error('Insert failed:', error.message);
@@ -365,7 +362,7 @@ async function main() {
 
   console.log(`\n✅ Inserted/updated ${data?.length ?? 0} rows:`);
   for (const r of data ?? []) {
-    console.log(`  id=${r.id}  ${r.title}`);
+    console.log(`  id=${r.id}  ${r.title_he}`);
   }
 }
 

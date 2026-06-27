@@ -59,7 +59,7 @@ function catLabel(slug: string | null): string {
 function buildRightsContent(row: Record<string, unknown>): string {
   const parts: string[] = [];
 
-  const title = (row.title_he as string | null) || (row.title as string | null);
+  const title = row.title_he as string | null;
   if (title) parts.push(title);
   parts.push(`קטגוריה: ${catLabel(row.category as string | null)}`);
   parts.push('');
@@ -95,7 +95,7 @@ function buildRightsContent(row: Record<string, unknown>): string {
 function buildTaskContent(row: Record<string, unknown>): string {
   const parts: string[] = [];
 
-  const title = (row.title_he as string | null) || (row.title as string | null);
+  const title = row.title_he as string | null;
   const parent = row.parent_title as string | null;
   const headingCtx = parent ? `${title} (חלק מ: ${parent})` : title;
   if (headingCtx) parts.push(headingCtx);
@@ -165,7 +165,7 @@ async function main() {
   await processTable(
     sb,
     'rights_items',
-    'id,title,title_he,category,description,eligibility_conditions,required_documents,discount_amount,deadlines',
+    'id,title_he,category,description,eligibility_conditions,required_documents,discount_amount,deadlines',
     buildRightsContent,
     3
   );
@@ -173,7 +173,7 @@ async function main() {
   await processTable(
     sb,
     'moving_tasks',
-    'id,title,title_he,category,parent_title,summary,action_steps',
+    'id,title_he,category,parent_title,summary,action_steps',
     buildTaskContent,
     3
   );

@@ -275,7 +275,6 @@ async function upsertTask(
 ): Promise<'inserted' | 'updated'> {
   const payload = {
     source:         SOURCE,
-    title:          section.title,
     title_he:       section.title,
     heading_level:  section.heading_level,
     parent_title:   section.parent_title,
@@ -292,7 +291,7 @@ async function upsertTask(
     .from('moving_tasks')
     .select('id')
     .eq('source', SOURCE)
-    .eq('title', section.title)
+    .eq('title_he', section.title)
     .maybeSingle();
 
   if (existing) {

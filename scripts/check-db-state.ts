@@ -7,14 +7,14 @@ const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_
 async function main() {
   const { data: tasks, error: tasksErr } = await sb
     .from('moving_tasks')
-    .select('id, title, category, clean_content, parent_title, summary, action_steps')
+    .select('id, title_he, category, clean_content, parent_title, summary, action_steps')
     .order('id');
 
   console.log('\n=== moving_tasks ===');
   if (tasksErr) console.log(`  SELECT ERROR: ${tasksErr.message}`);
   console.log(`Total rows returned: ${tasks?.length ?? 0}`);
   for (const t of tasks ?? []) {
-    console.log(`\n  id=${t.id} | category=${t.category} | title=${t.title}`);
+    console.log(`\n  id=${t.id} | category=${t.category} | title=${t.title_he}`);
     console.log(`  summary: ${(t.summary as string)?.slice(0, 120) ?? '(null)'}`);
     const steps = t.action_steps as string[] | null;
     if (steps?.length) console.log(`  steps: ${steps.slice(0,2).map((s:string)=>s.slice(0,60)).join(' | ')}`);

@@ -137,7 +137,6 @@ async function upsertItem(
   const payload = {
     city_id: cityId,
     category: item.category,
-    title: item.title_he,
     title_he: item.title_he,
     description: item.description,
     eligibility_conditions: item.eligibility_conditions,
