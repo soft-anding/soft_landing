@@ -8,6 +8,9 @@ from .config import settings
 from .constants import DEFAULT_STATUS, category_label
 from .supabase_client import get_supabase
 
+# item_types that are treated as "tasks" for filtering purposes
+_TASK_TYPES = {"moving_task", "custom_task"}
+
 
 def _as_list(value: Any) -> list[Any]:
     if value is None:
@@ -32,6 +35,27 @@ def _normalize_task(row: dict) -> dict:
         "required_documents": [],
         "discount_amount": None,
         "deadlines": None,
+    }
+
+
+def _normalize_custom_task(row: dict) -> dict:
+    return {
+        "item_type": "custom_task",
+        "item_id": row["id"],
+        "title_he": row.get("title"),
+        "summary": row.get("description"),
+        "category": row.get("category"),
+        "category_label": category_label(row.get("category")),
+        "source_url": None,
+        "links": [],
+        "action_steps": [],
+        "eligibility_conditions": [],
+        "required_documents": [],
+        "discount_amount": None,
+        "deadlines": None,
+        "deadline_type": row.get("deadline_type"),
+        "deadline_date": str(row["deadline_date"]) if row.get("deadline_date") else None,
+        "is_custom": True,
     }
 
 
@@ -111,12 +135,27 @@ def fetch_catalog(city_slug: str | None = None) -> list[dict]:
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
 
 
-def fetch_single_item(item_type: str, item_id: int) -> dict | None:
+def fetch_user_custom_tasks(user_id: str) -> list[dict]:
+    """Return normalized custom task items for a user, without status merged in."""
+    sb = get_supabase()
+    rows = (
+        sb.table("user_custom_tasks")
+        .select("id,user_id,title,description,category,deadline_type,deadline_date,created_at")
+        .eq("user_id", user_id)
+        .execute()
+        .data
+        or []
+    )
+    return [_normalize_custom_task(r) for r in rows]
+
+
+def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) -> dict | None:
     """Fetch and normalize exactly one catalog item by id.
 
     Used after a status update, where pulling the entire catalog (both
     tables, every row) just to find the one changed row made every status
     change noticeably slow.
+    For custom_task, user_id is required (service role sees all rows).
     """
     sb = get_supabase()
     if item_type == "moving_task":
@@ -146,6 +185,19 @@ def fetch_single_item(item_type: str, item_id: int) -> dict | None:
         )
         return _normalize_right(rows[0]) if rows else None
 
+    if item_type == "custom_task" and user_id:
+        rows = (
+            sb.table("user_custom_tasks")
+            .select("id,user_id,title,description,category,deadline_type,deadline_date,created_at")
+            .eq("id", item_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        return _normalize_custom_task(rows[0]) if rows else None
+
     return None
 
 
@@ -170,13 +222,22 @@ def fetch_items_with_status(
     city_slug: str | None = None,
 ) -> list[dict]:
     catalog = fetch_catalog(city_slug=city_slug)
+    # Custom tasks appear whenever moving_task type is requested (or no filter)
+    include_custom = item_type is None or item_type == "moving_task"
+    custom_items = fetch_user_custom_tasks(user_id) if include_custom else []
+
     status_map = fetch_user_status_map(user_id)
     items: list[dict] = []
-    for item in catalog:
+    for item in catalog + custom_items:
         if category and item["category"] != category:
             continue
-        if item_type and item["item_type"] != item_type:
+        # moving_task filter also admits custom_task items
+        if item_type == "moving_task":
+            if item["item_type"] not in _TASK_TYPES:
+                continue
+        elif item_type and item["item_type"] != item_type:
             continue
+
         st = status_map.get((item["item_type"], item["item_id"]))
         item = {
             **item,

@@ -13,7 +13,7 @@ class Category(BaseModel):
 
 
 class Item(BaseModel):
-    item_type: Literal["moving_task", "rights_item"]
+    item_type: Literal["moving_task", "rights_item", "custom_task"]
     item_id: int
     title_he: str | None = None
     summary: str | None = None
@@ -28,10 +28,22 @@ class Item(BaseModel):
     required_documents: list[Any] = Field(default_factory=list)
     discount_amount: str | None = None
     deadlines: str | None = None
+    # custom_task extras
+    deadline_type: str | None = None
+    deadline_date: str | None = None
+    is_custom: bool = False
     # per-user tracking
     status: str = STATUSES[0]
     notes: str | None = None
     next_action: str | None = None
+
+
+class CustomTaskCreate(BaseModel):
+    title: str
+    description: str | None = None
+    category: str | None = None
+    deadline_type: Literal["before_move", "move_day", "after_move", "specific_date"]
+    deadline_date: str | None = None  # ISO date string, required when deadline_type='specific_date'
 
 
 class StatusUpdate(BaseModel):

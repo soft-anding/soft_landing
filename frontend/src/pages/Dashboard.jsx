@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AppHeader from "../components/AppHeader";
 import AskBox from "../components/AskBox";
+import AddCustomTaskModal from "../components/AddCustomTaskModal";
 import ProgressTimeline from "../components/ProgressTimeline";
 import SideDrawer from "../components/SideDrawer";
 import Spinner from "../components/Spinner";
@@ -44,20 +45,17 @@ function groupByCategory(items) {
   return Object.values(map);
 }
 
-// ── Tasks section — all moving_tasks, grouped by category ────────────────────
-function TasksSection({ tasks, onStatusChange, savingId }) {
+// ── Tasks section — all moving_tasks + custom_tasks, grouped by category ─────
+function TasksSection({ tasks, onStatusChange, savingId, onAddTask }) {
   const groups = groupByCategory(tasks);
-
-  if (!groups.length) {
-    return (
-      <p className="font-body-md text-body-md text-on-surface-variant text-right">
-        עדיין אין משימות מעבר — נחזור בקרוב.
-      </p>
-    );
-  }
 
   return (
     <div className="space-y-lg">
+      {!groups.length && (
+        <p className="font-body-md text-body-md text-on-surface-variant text-right">
+          עדיין אין משימות מעבר — נחזור בקרוב.
+        </p>
+      )}
       {groups.map((g) => (
         <div key={g.key}>
           <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md text-right flex items-center gap-sm">
@@ -79,6 +77,14 @@ function TasksSection({ tasks, onStatusChange, savingId }) {
           </div>
         </div>
       ))}
+      {/* Add task button — always at the bottom of the tasks section */}
+      <button
+        onClick={onAddTask}
+        className="flex items-center gap-sm px-md py-sm rounded-xl border border-dashed border-primary/40 text-primary font-label-md text-label-md hover:border-primary hover:bg-primary-container/10 transition-colors w-full justify-center"
+      >
+        <span className="material-symbols-outlined text-base">add_circle</span>
+        הוסף משימה אישית
+      </button>
     </div>
   );
 }
@@ -195,13 +201,14 @@ export default function Dashboard() {
   const cacheKey = destinationCity || "none";
   const cached   = readCache(cacheKey);
 
-  const [progress,   setProgress]   = useState(cached?.progress ?? null);
-  const [tasks,      setTasks]      = useState(cached?.tasks ?? []);
-  const [rights,     setRights]     = useState(cached?.rights ?? []);
-  const [loading,    setLoading]    = useState(!cached);
-  const [error,      setError]      = useState(null);
-  const [savingId,   setSavingId]   = useState(null);
-  const [showInfo,   setShowInfo]   = useState(false);
+  const [progress,     setProgress]     = useState(cached?.progress ?? null);
+  const [tasks,        setTasks]        = useState(cached?.tasks ?? []);
+  const [rights,       setRights]       = useState(cached?.rights ?? []);
+  const [loading,      setLoading]      = useState(!cached);
+  const [error,        setError]        = useState(null);
+  const [savingId,     setSavingId]     = useState(null);
+  const [showInfo,     setShowInfo]     = useState(false);
+  const [showAddTask,  setShowAddTask]  = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -224,6 +231,16 @@ export default function Dashboard() {
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [destinationCity]);
+
+  const handleTaskCreated = (newItem) => {
+    setTasks((prev) => {
+      const next = [...prev, newItem];
+      writeCache(cacheKey, { progress, tasks: next, rights });
+      return next;
+    });
+    // Refresh progress so total/completed counts update
+    api.progress().then(setProgress).catch(() => {});
+  };
 
   const handleStatusChange = async (item, status) => {
     const key = `${item.item_type}:${item.item_id}`;
@@ -251,6 +268,12 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen">
       <AppHeader />
+      {showAddTask && (
+        <AddCustomTaskModal
+          onClose={() => setShowAddTask(false)}
+          onTaskCreated={handleTaskCreated}
+        />
+      )}
       <main className="pt-32 pb-xl px-gutter max-w-container-max mx-auto">
 
         <section className="mb-lg text-right">
@@ -298,6 +321,7 @@ export default function Dashboard() {
                 tasks={tasks}
                 onStatusChange={handleStatusChange}
                 savingId={savingId}
+                onAddTask={() => setShowAddTask(true)}
               />
             </section>
 

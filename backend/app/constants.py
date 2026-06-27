@@ -18,7 +18,7 @@ STATUSES: list[str] = [
 DEFAULT_STATUS = "לא התחיל"
 DONE_STATUS = "הושלם"
 
-ITEM_TYPES = ("moving_task", "rights_item")
+ITEM_TYPES = ("moving_task", "rights_item", "custom_task")
 
 # Hebrew labels for the category slugs found in moving_tasks / rights_items.
 CATEGORY_LABELS: dict[str, str] = {
@@ -28,6 +28,9 @@ CATEGORY_LABELS: dict[str, str] = {
     "utilities": "חשבונות וספקי שירות",
     "communication_services": "תקשורת: אינטרנט וטלוויזיה",
     "financial": "כספים ותשלומים",
+    "logistics": "לוגיסטיקה ומעבר",
+    "household_setup": "סידור הבית",
+    "education": "חינוך",
     "other": "כללי",
     # rights_items
     "rights_general": "זכויות כלליות",

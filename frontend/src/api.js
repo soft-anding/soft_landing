@@ -53,6 +53,9 @@ const realApi = {
   setStatus: (itemType, itemId, payload) =>
     request(`/items/${itemType}/${itemId}/status`, { method: "PUT", body: payload }),
 
+  createCustomTask: (payload) =>
+    request("/custom-tasks", { method: "POST", body: payload }),
+
   ask: (payload) =>
     request("/ask", { method: "POST", body: payload }),
 };
