@@ -61,6 +61,9 @@ const realApi = {
 
   ask: (payload) =>
     request("/ask", { method: "POST", body: payload }),
+
+  taskAgentChat: (messages) =>
+    request("/task-agent/chat", { method: "POST", body: { messages } }),
 };
 
 // In demo mode, serve mock data with no backend (see demo.js / demoData.js).

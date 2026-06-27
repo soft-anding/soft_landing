@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     # AI agents (Claude)
     anthropic_api_key: str = ""   # Anthropic Claude — for form expert + task planning agents
 
+    # Tasks AI agent (OpenAI) — powers the in-app "סוכן AI למשימות" chat
+    tasks_agent_openai_api_key: str = ""
+    open_ai_model: str = "gpt-4o-mini"
+    open_ai_model_backup: str = "gpt-4o"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

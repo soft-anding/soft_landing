@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { api } from "../api";
 
 // Floating launcher button that opens the chat — fixed in the same corner the
 // chat panel itself opens from, so it reads as "tap here to open this panel."
@@ -24,6 +25,7 @@ export default function TaskAgentChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
+  const [sending, setSending] = useState(false);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
 
@@ -43,17 +45,29 @@ export default function TaskAgentChat({ open, onClose }) {
 
   if (!open) return null;
 
-  function handleSend(e) {
+  async function handleSend(e) {
     e.preventDefault();
     const text = input.trim();
     if (!text && !file) return;
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", text: file ? `${text} 📎 ${file.name}`.trim() : text },
-    ]);
+    const userText = file ? `${text} 📎 ${file.name}`.trim() : text;
+    const nextMessages = [...messages, { role: "user", text: userText }];
+    setMessages(nextMessages);
     setInput("");
     setFile(null);
-    // TODO: send `text`/`file` to the task-AI agent backend and append its reply here.
+    setSending(true);
+    try {
+      const { reply } = await api.taskAgentChat(
+        nextMessages.map((m) => ({ role: m.role, content: m.text }))
+      );
+      setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: "מצטערים, הייתה שגיאה בפנייה לסוכן. נסו שוב." },
+      ]);
+    } finally {
+      setSending(false);
+    }
   }
 
   function handleEndConversation() {
@@ -109,6 +123,11 @@ export default function TaskAgentChat({ open, onClose }) {
             </div>
           ))
         )}
+        {sending && (
+          <div className="w-fit max-w-[80%] px-sm py-1.5 rounded-xl font-body-md text-body-md bg-surface-container text-on-surface-variant mr-auto">
+            …
+          </div>
+        )}
       </div>
 
       {file && (
@@ -154,7 +173,7 @@ export default function TaskAgentChat({ open, onClose }) {
 
         <button
           type="submit"
-          disabled={!input.trim() && !file}
+          disabled={sending || (!input.trim() && !file)}
           className="shrink-0 w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center disabled:opacity-50 transition-opacity"
           aria-label="שלח"
         >

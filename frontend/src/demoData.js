@@ -258,4 +258,7 @@ export const demoApi = {
     }
     return delay({ ...it });
   },
+
+  taskAgentChat: () =>
+    delay({ reply: "זה מצב הדגמה — הסוכן עדיין לא מחובר כאן." }),
 };

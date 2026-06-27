@@ -67,3 +67,16 @@ class ProgressSummary(BaseModel):
     completed: int
     completed_pct: int
     by_status: dict[str, int]
+
+
+class TaskAgentMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class TaskAgentChatRequest(BaseModel):
+    messages: list[TaskAgentMessage]
+
+
+class TaskAgentChatResponse(BaseModel):
+    reply: str
