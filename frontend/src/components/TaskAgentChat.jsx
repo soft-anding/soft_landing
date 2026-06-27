@@ -21,6 +21,9 @@ export function TaskAgentFab({ onClick }) {
 // replace handleSend's TODO with the real API call (including uploading `file`).
 // Rendered as a small floating widget (not a full-height drawer) so it doesn't
 // take over the screen like the task/info side panels do.
+const GREETING =
+  "היי! אני העוזר האישי שלך למעבר. אני כאן כדי לעזור לך לעשות סדר במשימות, להבין מה דחוף ומה אפשר לדחות, ולענות על כל שאלה לגבי התהליך. במה אפשר לעזור?";
+
 export default function TaskAgentChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -28,6 +31,7 @@ export default function TaskAgentChat({ open, onClose }) {
   const [sending, setSending] = useState(false);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -43,6 +47,13 @@ export default function TaskAgentChat({ open, onClose }) {
     };
   }, [open, onClose]);
 
+  // Greet the user automatically the first time the chat opens, before they type anything.
+  useEffect(() => {
+    if (open && messages.length === 0) {
+      setMessages([{ role: "assistant", text: GREETING }]);
+    }
+  }, [open, messages.length]);
+
   if (!open) return null;
 
   async function handleSend(e) {
@@ -54,6 +65,7 @@ export default function TaskAgentChat({ open, onClose }) {
     setMessages(nextMessages);
     setInput("");
     setFile(null);
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setSending(true);
     try {
       const { reply } = await api.taskAgentChat(
@@ -111,21 +123,25 @@ export default function TaskAgentChat({ open, onClose }) {
       <div className="flex-1 overflow-y-auto px-md py-md space-y-xs">
         {messages.length > 0 && (
           messages.map((m, i) => (
-            <div
-              key={i}
-              className={`w-fit max-w-[80%] px-sm py-1.5 rounded-xl font-body-md text-body-md break-words ${
-                m.role === "user"
-                  ? "bg-primary text-on-primary ml-auto"
-                  : "bg-surface-container text-on-surface mr-auto"
-              }`}
-            >
-              {m.text}
+            <div key={i} className="flex">
+              <div
+                dir="rtl"
+                className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed text-black text-right break-words ${
+                  m.role === "user"
+                    ? "bg-white border border-gray-300 mr-auto"
+                    : "bg-gray-100 ml-auto"
+                }`}
+              >
+                {m.text}
+              </div>
             </div>
           ))
         )}
         {sending && (
-          <div className="w-fit max-w-[80%] px-sm py-1.5 rounded-xl font-body-md text-body-md bg-surface-container text-on-surface-variant mr-auto">
-            …
+          <div className="flex">
+            <div className="max-w-[80%] px-3 py-2 rounded-2xl text-xs text-black bg-gray-100 ml-auto">
+              …
+            </div>
           </div>
         )}
       </div>
@@ -145,13 +161,25 @@ export default function TaskAgentChat({ open, onClose }) {
         </div>
       )}
 
-      <form onSubmit={handleSend} className="flex items-center gap-xs px-md py-sm border-t border-outline-variant/20 shrink-0">
-        <input
-          type="text"
+      <form onSubmit={handleSend} className="flex items-end gap-xs px-md py-sm border-t border-outline-variant/20 shrink-0">
+        <textarea
+          ref={textareaRef}
+          dir="rtl"
+          rows={1}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            e.target.style.height = "auto";
+            e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend(e);
+            }
+          }}
           placeholder="כתבו הודעה…"
-          className="flex-1 px-md py-1.5 rounded-xl border border-outline-variant font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+          className="flex-1 px-md py-1.5 rounded-xl border border-outline-variant font-body-md text-body-md text-right text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none overflow-y-auto leading-snug"
         />
 
         {/* Attach image/file */}
