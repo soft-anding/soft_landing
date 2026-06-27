@@ -14,7 +14,7 @@ from .. import task_actions
 from ..auth import CurrentUser, get_current_user
 from ..catalog_service import _fetch_user_profile, fetch_items_with_status
 from ..config import settings
-from ..constants import STATUSES
+from ..constants import CUSTOM_TASK_CATEGORIES, STATUSES
 from ..schemas import TaskAgentChatRequest, TaskAgentChatResponse
 
 router = APIRouter(prefix="/task-agent", tags=["task-agent"])
@@ -24,6 +24,13 @@ _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "task_agent_pro
 
 _DEADLINE_TYPES = ["before_move", "move_day", "after_move", "specific_date"]
 _MAX_TOOL_ROUNDS = 4
+
+# These are the real category values used in moving_tasks (free Hebrew text,
+# not slugs) — see constants.CUSTOM_TASK_CATEGORIES for why.
+_CATEGORY_DESCRIPTION = (
+    "הקטגוריה המתאימה ביותר מבין הרשימה הקבועה, לפי המשמעות הכללית של המשימה "
+    "(לא לפי התאמת מילת מפתח מדויקת): " + ", ".join(CUSTOM_TASK_CATEGORIES)
+)
 
 TOOLS = [
     {
@@ -36,14 +43,37 @@ TOOLS = [
                 "properties": {
                     "title": {"type": "string", "description": "כותרת המשימה"},
                     "description": {"type": "string", "description": "פירוט נוסף, אופציונלי"},
-                    "category": {"type": "string", "description": "קטגוריה חופשית, אופציונלי"},
+                    "category": {
+                        "type": "string",
+                        "enum": CUSTOM_TASK_CATEGORIES,
+                        "description": _CATEGORY_DESCRIPTION,
+                    },
                     "deadline_type": {"type": "string", "enum": _DEADLINE_TYPES},
                     "deadline_date": {
                         "type": "string",
                         "description": "תאריך בפורמט YYYY-MM-DD — נדרש רק אם deadline_type הוא specific_date",
                     },
                 },
-                "required": ["title", "deadline_type"],
+                "required": ["title", "deadline_type", "category"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_task_category",
+            "description": "משנה את הקטגוריה של משימה אישית קיימת (custom_task בלבד).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "item_id": {"type": "integer"},
+                    "category": {
+                        "type": "string",
+                        "enum": CUSTOM_TASK_CATEGORIES,
+                        "description": _CATEGORY_DESCRIPTION,
+                    },
+                },
+                "required": ["item_id", "category"],
             },
         },
     },
@@ -124,6 +154,10 @@ def _execute_tool(user_id: str, name: str, args: dict) -> dict:
                 description=args.get("description"),
                 category=args.get("category"),
                 deadline_date=args.get("deadline_date"),
+            )
+        elif name == "set_task_category":
+            item = task_actions.set_task_category(
+                user_id, int(args["item_id"]), args["category"]
             )
         elif name == "set_task_status":
             item = task_actions.set_task_status(

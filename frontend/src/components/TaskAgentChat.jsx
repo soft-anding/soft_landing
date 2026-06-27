@@ -179,7 +179,8 @@ export default function TaskAgentChat({ open, onClose }) {
             }
           }}
           placeholder="כתבו הודעה…"
-          className="flex-1 px-md py-1.5 rounded-xl border border-outline-variant font-body-md text-body-md text-right text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none overflow-y-auto leading-snug"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          className="flex-1 px-md py-1.5 rounded-xl border border-outline-variant text-xs text-right text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none overflow-y-auto leading-snug [&::-webkit-scrollbar]:hidden"
         />
 
         {/* Attach image/file */}

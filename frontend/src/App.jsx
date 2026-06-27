@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import Spinner from "./components/Spinner";
+import TaskAgentChat, { TaskAgentFab } from "./components/TaskAgentChat";
 import CategoryView from "./pages/CategoryView";
 import Dashboard from "./pages/Dashboard";
 import ItemDetail from "./pages/ItemDetail";
@@ -26,8 +28,15 @@ function RequireAuth({ children }) {
 
 export default function App() {
   const { session, userProfile, loading } = useAuth();
+  const [agentOpen, setAgentOpen] = useState(false);
+
+  // Lives above <Routes> (not inside Dashboard) so navigating to a category
+  // or item-detail page and back doesn't unmount it and lose the conversation —
+  // only "סיים שיחה" inside the chat itself should reset it.
+  const showAgent = Boolean(session && userProfile);
 
   return (
+    <>
     <Routes>
       {/*
        * "/" is the public landing/login page.
@@ -69,5 +78,13 @@ export default function App() {
       {/* Catch-all → landing */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+
+    {showAgent && (
+      <>
+        {!agentOpen && <TaskAgentFab onClick={() => setAgentOpen(true)} />}
+        <TaskAgentChat open={agentOpen} onClose={() => setAgentOpen(false)} />
+      </>
+    )}
+    </>
   );
 }

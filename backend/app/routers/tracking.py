@@ -2,12 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from ..auth import CurrentUser, get_current_user
-from ..catalog_service import (
-    fetch_catalog,
-    fetch_single_item,
-    fetch_user_custom_tasks,
-    fetch_user_status_map,
-)
+from ..catalog_service import fetch_items_with_status, fetch_single_item
 from ..constants import DEFAULT_STATUS, DONE_STATUS, STATUSES
 from ..schemas import CustomTaskCreate, DeadlineUpdate, Item, ProgressSummary, StatusUpdate
 from ..supabase_client import get_supabase
@@ -174,33 +169,22 @@ def create_custom_task(
 
 @router.get("/progress", response_model=ProgressSummary)
 def progress(user: CurrentUser = Depends(get_current_user)) -> ProgressSummary:
-    catalog = fetch_catalog()
-    tasks_only = [i for i in catalog if i["item_type"] == "moving_task"]
-    custom_tasks = fetch_user_custom_tasks(user.id)
+    # Same personalized set (relevance_rule + tag filtering applied) the
+    # category cards on the Dashboard are built from — otherwise this total
+    # double-counts moving_tasks that were filtered out as irrelevant to the
+    # user's profile, and the header total doesn't match the cards' sum.
+    items = fetch_items_with_status(user.id, item_type="moving_task")
 
-    total = len(tasks_only) + len(custom_tasks)
-    all_task_keys = (
-        {(i["item_type"], i["item_id"]) for i in tasks_only}
-        | {(i["item_type"], i["item_id"]) for i in custom_tasks}
-    )
-
-    status_map = fetch_user_status_map(user.id)
+    total = len(items)
     by_status = {s: 0 for s in STATUSES}
-    tracked = 0
-    for key, row in status_map.items():
-        if key not in all_task_keys:
-            continue
-        tracked += 1
-        by_status[row["status"]] = by_status.get(row["status"], 0) + 1
-
-    # Catalog tasks the user never touched count as the default status.
-    by_status[DEFAULT_STATUS] += max(total - tracked, 0)
+    for item in items:
+        by_status[item["status"]] = by_status.get(item["status"], 0) + 1
 
     completed = by_status.get(DONE_STATUS, 0)
     completed_pct = round(completed / total * 100) if total else 0
     return ProgressSummary(
         total=total,
-        tracked=tracked,
+        tracked=total,
         completed=completed,
         completed_pct=completed_pct,
         by_status=by_status,

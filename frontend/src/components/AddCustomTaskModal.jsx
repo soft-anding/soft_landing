@@ -1,18 +1,25 @@
 import { useState } from "react";
 import { api } from "../api";
 
+// Mirrors the real category values used in moving_tasks (backend
+// constants.CUSTOM_TASK_CATEGORIES) — kept in sync manually since that
+// column holds free Hebrew text, not slugs. Using the same values here
+// means a custom task groups together with the matching moving_tasks
+// category in the Dashboard instead of creating a disconnected bucket.
 const CATEGORIES = [
-  { value: "government_registry",    label: "ממשל וכתובת רשמית" },
-  { value: "municipal",              label: "עירייה" },
-  { value: "utilities",              label: "חשבונות וספקי שירות" },
-  { value: "communication_services", label: "תקשורת: אינטרנט וטלוויזיה" },
-  { value: "financial",              label: "כספים ותשלומים" },
-  { value: "logistics",              label: "לוגיסטיקה ומעבר" },
-  { value: "household_setup",        label: "סידור הבית" },
-  { value: "education",              label: "חינוך" },
-  { value: "other",                  label: "כללי" },
-  { value: "__custom__",             label: "קטגוריה חדשה…" },
-];
+  "אריזה והובלה",
+  "בירוקרטיה כללית",
+  "בירוקרטיה ממשלתית",
+  "בירוקרטיה של עיריות",
+  "הכנת הבית החדש",
+  "חינוך",
+  "לוגיסטיקות",
+  "פינוי דירה ישנה",
+  "רכב",
+  "שירותים חשובים",
+  "אחר",
+].map((value) => ({ value, label: value }));
+CATEGORIES.push({ value: "__custom__", label: "קטגוריה חדשה…" });
 
 const DEADLINE_OPTIONS = [
   { value: "before_move",   label: "לפני המעבר" },
@@ -24,7 +31,7 @@ const DEADLINE_OPTIONS = [
 const EMPTY = {
   title: "",
   description: "",
-  category: "other",
+  category: "אחר",
   customCategory: "",
   deadline_type: "before_move",
   deadline_date: "2026-01-01",

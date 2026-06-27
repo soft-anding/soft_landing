@@ -4,7 +4,7 @@ tasks AI agent's tool-calling. Deliberately separate from routers/tracking.py
 support rights_item and notes/next_action — are left untouched.
 """
 from .catalog_service import fetch_single_item
-from .constants import DEFAULT_STATUS, STATUSES
+from .constants import CUSTOM_TASK_CATEGORIES, DEFAULT_STATUS, STATUSES
 from .supabase_client import get_supabase
 
 _DEADLINE_TYPES = {"before_move", "move_day", "after_move", "specific_date"}
@@ -93,6 +93,25 @@ def set_task_deadline(
     return item
 
 
+def set_task_category(user_id: str, item_id: int, category: str) -> dict:
+    """Changes the category of an existing custom task (categories on
+    moving_task/rights_item items come from the shared catalog and aren't
+    user-editable, so this only applies to custom_task).
+    """
+    if category not in CUSTOM_TASK_CATEGORIES:
+        raise ValueError(f"קטגוריה לא חוקית. אפשרי: {CUSTOM_TASK_CATEGORIES}")
+
+    sb = get_supabase()
+    sb.table("user_custom_tasks").update({"category": category}).eq(
+        "id", item_id
+    ).eq("user_id", user_id).execute()
+
+    item = fetch_single_item("custom_task", item_id, user_id=user_id)
+    if item is None:
+        raise ValueError("המשימה לא נמצאה.")
+    return item
+
+
 def add_custom_task(
     user_id: str,
     title: str,
@@ -103,6 +122,8 @@ def add_custom_task(
 ) -> dict:
     if not title or not title.strip():
         raise ValueError("כותרת המשימה לא יכולה להיות ריקה.")
+    if category is not None and category not in CUSTOM_TASK_CATEGORIES:
+        raise ValueError(f"קטגוריה לא חוקית. אפשרי: {CUSTOM_TASK_CATEGORIES}")
     _validate_deadline(deadline_type, deadline_date)
 
     sb = get_supabase()

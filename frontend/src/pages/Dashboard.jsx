@@ -4,7 +4,6 @@ import AddCustomTaskModal from "../components/AddCustomTaskModal";
 import ProgressTimeline from "../components/ProgressTimeline";
 import SideDrawer from "../components/SideDrawer";
 import Spinner from "../components/Spinner";
-import TaskAgentChat, { TaskAgentFab } from "../components/TaskAgentChat";
 import TaskCard from "../components/TaskCard";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
@@ -185,7 +184,6 @@ function sortByUrgency(tasks) {
 function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAddTask }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [urgencySort, setUrgencySort] = useState(false);
-  const [agentOpen, setAgentOpen] = useState(false);
 
   // Re-derive summaries live from tasks so counts update when a task status changes.
   const summaries = getCategorySummaries(tasks);
@@ -198,7 +196,6 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
 
   // ── Controls row — always visible ────────────────────────────────────────
   const controls = (
-    <>
     <div className="flex items-center justify-between gap-md flex-wrap">
       <button
         onClick={onAddTask}
@@ -218,9 +215,6 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
         {urgencySort ? "חזרה לתצוגת קטגוריות" : "מיין לפי דחיפות"}
       </button>
     </div>
-    {!agentOpen && <TaskAgentFab onClick={() => setAgentOpen(true)} />}
-    <TaskAgentChat open={agentOpen} onClose={() => setAgentOpen(false)} />
-    </>
   );
 
   if (!summaries.length) {
@@ -498,6 +492,8 @@ export default function Dashboard() {
         writeCache(cacheKey, { progress, tasks: next, rights });
         return next;
       });
+      // Status changes affect completed/total counts in the header — refresh it too.
+      api.progress().then(setProgress).catch(() => {});
     } catch (e) {
       setError(e.message);
     } finally {
