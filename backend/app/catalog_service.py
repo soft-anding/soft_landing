@@ -115,7 +115,7 @@ def _fetch_rights_items(city_slug: str | None = None) -> list[dict]:
     # Do NOT add city_id to the SELECT — we only need it for filtering,
     # and PostgREST lets you filter by a column without returning it.
     query = sb.table("rights_items").select(
-        "id,title,title_he,description,eligibility_conditions,required_documents,"
+        "id,title_he,description,eligibility_conditions,required_documents,"
         "discount_amount,deadlines,category,source_url,tags"
     )
     if not settings.show_unverified:
@@ -198,7 +198,7 @@ def fetch_catalog(city_slug: str | None = None) -> list[dict]:
     """
     tasks = _fetch_table(
         "moving_tasks",
-        "id,title,title_he,summary,action_steps,related_links,category,source_url,tags,relevance_rule,timeline_stage",
+        "id,title_he,summary,action_steps,related_links,category,source_url,tags,relevance_rule,timeline_stage",
     )
     rights = _fetch_rights_items(city_slug=city_slug)
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
@@ -230,7 +230,7 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
     if item_type == "moving_task":
         rows = (
             sb.table("moving_tasks")
-            .select("id,title,title_he,summary,action_steps,related_links,category,source_url,tags,relevance_rule,timeline_stage")
+            .select("id,title_he,summary,action_steps,related_links,category,source_url,tags,relevance_rule,timeline_stage")
             .eq("id", item_id)
             .limit(1)
             .execute()
@@ -243,7 +243,7 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
         rows = (
             sb.table("rights_items")
             .select(
-                "id,title,title_he,description,eligibility_conditions,required_documents,"
+                "id,title_he,description,eligibility_conditions,required_documents,"
                 "discount_amount,deadlines,category,source_url,tags"
             )
             .eq("id", item_id)

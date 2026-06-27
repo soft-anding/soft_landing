@@ -80,7 +80,8 @@ function DonutChart({ percentage, size = 68 }) {
 // can place a real <button> inside it for the collapse action without nesting issues.
 // When `compact` is true the box shrinks for the "other categories" row in State 2.
 function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
-  const chartSize = compact ? 44 : 68;
+  const pinned = !!onCollapse;
+  const chartSize = compact ? 56 : pinned ? 112 : 68;
   const pct = summary.percentage;
 
   const inner = (
@@ -92,12 +93,16 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
             className="shrink-0 flex items-center text-primary hover:bg-primary-container/20 rounded-full p-xs transition-colors"
             title="חזור לכל הקטגוריות"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: "1.1rem", lineHeight: 1 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: pinned ? "1.5rem" : "1.1rem", lineHeight: 1 }}>
               expand_less
             </span>
           </button>
         )}
-        <span className={`font-label-md text-on-surface leading-snug ${compact ? "text-xs" : "text-label-md"}`}>
+        <span
+          className={`text-on-surface leading-snug ${
+            compact ? "font-label-sm text-label-sm" : pinned ? "font-headline-sm text-headline-sm" : "font-label-md text-label-md"
+          }`}
+        >
           {summary.label}
         </span>
       </div>
@@ -105,14 +110,27 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
         <DonutChart percentage={pct} size={chartSize} />
         <span
           className="absolute inset-0 flex items-center justify-center font-semibold text-primary"
-          style={{ fontSize: compact ? "0.6rem" : "0.72rem" }}
+          style={{ fontSize: compact ? "0.85rem" : pinned ? "1.5rem" : "0.72rem" }}
         >
           {pct}%
         </span>
       </div>
-      {!compact && (
+      {!compact && pinned && (
+        <div className="inline-flex flex-col items-center w-fit">
+          <span className="font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+            {`השלמתם ${summary.completed} מתוך ${summary.total} משימות`}
+          </span>
+          <div className="h-1.5 mt-xs rounded-full bg-outline-variant/20 overflow-hidden w-[calc(100%+1rem)] -mx-2">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      )}
+      {!compact && !pinned && (
         <span className="font-label-sm text-label-sm text-on-surface-variant">
-          {summary.completed} מתוך {summary.total}
+          {`${summary.completed} מתוך ${summary.total}`}
         </span>
       )}
     </>
@@ -120,7 +138,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
 
   if (onCollapse) {
     return (
-      <div className="bg-white rounded-xl border-2 border-primary/40 soft-shadow flex flex-col items-center gap-sm p-md w-full text-center">
+      <div className="bg-white rounded-2xl border-2 border-primary/40 soft-shadow flex flex-col items-center gap-md p-lg w-full text-center">
         {inner}
       </div>
     );
@@ -128,7 +146,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
   return (
     <button
       onClick={onClick}
-      className={`group bg-white rounded-xl border border-outline-variant/30 soft-shadow flex flex-col items-center gap-sm transition-all duration-150 hover:border-primary/50 hover:bg-surface-bright active:scale-[0.97] w-full text-center cursor-pointer ${compact ? "p-sm" : "p-md"}`}
+      className="group bg-white rounded-2xl border border-outline-variant/30 soft-shadow flex flex-col items-center gap-sm p-md transition-all duration-150 hover:border-primary/50 hover:bg-surface-bright active:scale-[0.97] w-full text-center cursor-pointer"
     >
       {inner}
     </button>
@@ -193,8 +211,8 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
             ? "bg-primary/10 text-primary border-primary/40 font-semibold"
             : "text-on-surface-variant border-outline-variant/30 hover:text-primary hover:border-primary/40"}`}
       >
-        <span className="material-symbols-outlined text-sm">sort</span>
-        מיין לפי דחיפות
+        <span className="material-symbols-outlined text-sm">{urgencySort ? "grid_view" : "sort"}</span>
+        {urgencySort ? "חזרה לתצוגת קטגוריות" : "מיין לפי דחיפות"}
       </button>
     </div>
   );

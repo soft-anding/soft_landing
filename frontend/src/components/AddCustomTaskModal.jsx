@@ -27,7 +27,7 @@ const EMPTY = {
   category: "other",
   customCategory: "",
   deadline_type: "before_move",
-  deadline_date: "",
+  deadline_date: "2026-01-01",
 };
 
 export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
@@ -82,15 +82,15 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
         dir="rtl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-lg py-md border-b border-outline-variant/20">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">הוספת משימה אישית</h2>
+        <div className="relative px-lg py-md border-b border-outline-variant/20">
           <button
             onClick={onClose}
-            className="text-on-surface-variant hover:text-on-surface transition-colors"
+            className="absolute top-sm right-sm text-on-surface-variant hover:text-on-surface transition-colors"
             aria-label="סגור"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
+          <h2 className="font-headline-md text-headline-md text-on-surface text-center px-xl">הוספת משימה אישית</h2>
         </div>
 
         {/* Form — scrollable if the screen is very short */}
@@ -208,20 +208,13 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
             )}
 
             {/* Actions */}
-            <div className="flex gap-sm pt-sm border-t border-outline-variant/20">
+            <div className="flex justify-center pt-sm border-t border-outline-variant/20">
               <button
                 type="submit"
                 disabled={saving || !form.title.trim() || (isCustomCategory && !form.customCategory.trim())}
-                className="flex-1 py-2 rounded-xl bg-primary text-on-primary font-label-md text-label-md transition-opacity disabled:opacity-50"
+                className="px-xl py-2 rounded-xl bg-primary text-on-primary font-label-md text-label-md transition-opacity disabled:opacity-50"
               >
                 {saving ? "שומר…" : "הוסף משימה"}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-lg py-2 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:border-primary/40 transition-colors"
-              >
-                ביטול
               </button>
             </div>
           </div>

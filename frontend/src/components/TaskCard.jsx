@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { STATUSES, STATUS_ICON, statusStyle } from "../statusConfig";
+import ShrinkToFitTitle from "./ShrinkToFitTitle";
 import SideDrawer from "./SideDrawer";
 
 // ── Inline status picker — click the badge to open a dropdown menu ────────────
@@ -44,7 +45,7 @@ function StatusPicker({ item, onStatusChange, saving }) {
       </button>
 
       {open && (
-        <div className="absolute top-full mt-1 left-0 z-50 bg-white rounded-xl border border-outline-variant/30 shadow-lg overflow-hidden min-w-max">
+        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-50 bg-white rounded-md border border-outline-variant/30 shadow-lg overflow-hidden min-w-max">
           {STATUSES.map((s) => {
             const current = s === item.status;
             return (
@@ -82,9 +83,15 @@ const DEADLINE_OPTIONS = [
   { type: "after_move",  label: "אחרי המעבר" },
 ];
 
+// "YYYY-MM-DD" (the <input type="date"> / API format) → "DD/MM/YYYY" for display.
+function formatDateDisplay(isoDate) {
+  const [y, m, d] = isoDate.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 function deadlineLabel(deadlineType, deadlineDate) {
   if (!deadlineType) return null;
-  if (deadlineType === "specific_date") return deadlineDate || "תאריך";
+  if (deadlineType === "specific_date") return deadlineDate ? formatDateDisplay(deadlineDate) : "תאריך";
   return DEADLINE_OPTIONS.find((o) => o.type === deadlineType)?.label ?? null;
 }
 
@@ -92,7 +99,7 @@ function deadlineLabel(deadlineType, deadlineDate) {
 function DeadlinePicker({ item, onDeadlineChange, saving }) {
   const [open, setOpen]           = useState(false);
   const [showDate, setShowDate]   = useState(false);
-  const [dateInput, setDateInput] = useState("");
+  const [dateInput, setDateInput] = useState("2026-01-01");
   const ref = useRef(null);
 
   // Close the popover when clicking outside.
@@ -109,7 +116,7 @@ function DeadlinePicker({ item, onDeadlineChange, saving }) {
   useEffect(() => {
     if (!open) {
       setShowDate(false);
-      setDateInput("");
+      setDateInput("2026-01-01");
     }
   }, [open]);
 
@@ -132,7 +139,7 @@ function DeadlinePicker({ item, onDeadlineChange, saving }) {
 
   function handleSelectDate() {
     setShowDate(true);
-    setDateInput(item.deadline_type === "specific_date" ? (item.deadline_date || "") : "");
+    setDateInput(item.deadline_type === "specific_date" ? (item.deadline_date || "2026-01-01") : "2026-01-01");
   }
 
   function handleConfirmDate() {
@@ -158,40 +165,36 @@ function DeadlinePicker({ item, onDeadlineChange, saving }) {
         </span>
       </button>
 
-      {/* Dropdown — pops upward from the card bottom */}
+      {/* Dropdown */}
       {open && (
-        <div className="absolute bottom-full mb-2 left-0 z-50 bg-white rounded-xl border border-outline-variant/30 shadow-lg overflow-hidden min-w-[10rem]">
+        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-50 bg-white rounded-md border border-outline-variant/30 shadow-lg overflow-hidden min-w-[9rem]">
           {!showDate ? (
             <>
               {DEADLINE_OPTIONS.map(({ type, label: optLabel }) => {
-                const isActive  = activeType === type;
-                const isDefault = !item.deadline_type && item.timeline_stage === type;
+                const isActive = activeType === type;
                 return (
                   <button
                     key={type}
                     onClick={() => handleSelectPreset(type)}
-                    className={`w-full flex items-center justify-between px-md py-xs font-label-sm text-label-sm text-right transition-colors
+                    className={`w-full px-md py-sm font-label-sm text-label-sm text-right whitespace-nowrap transition-colors
                       ${isActive
                         ? "bg-primary-container/20 text-primary font-semibold"
                         : "text-on-surface hover:bg-surface-container"}`}
                   >
-                    <span>{optLabel}</span>
-                    {isDefault && (
-                      <span className="font-label-sm text-label-sm text-on-surface-variant/50 text-xs mr-sm">ברירת מחדל</span>
-                    )}
+                    {optLabel}
                   </button>
                 );
               })}
               <button
                 onClick={handleSelectDate}
-                className={`w-full flex items-center gap-xs px-md py-xs font-label-sm text-label-sm text-right transition-colors border-t border-outline-variant/20
+                className={`w-full flex items-center gap-xs px-md py-sm font-label-sm text-label-sm text-right transition-colors border-t border-outline-variant/20
                   ${item.deadline_type === "specific_date"
                     ? "bg-primary-container/20 text-primary font-semibold"
                     : "text-on-surface hover:bg-surface-container"}`}
               >
                 <span className="material-symbols-outlined text-sm">calendar_month</span>
                 {item.deadline_type === "specific_date" && item.deadline_date
-                  ? item.deadline_date
+                  ? formatDateDisplay(item.deadline_date)
                   : "בחר תאריך…"}
               </button>
             </>
@@ -250,13 +253,10 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
               {item.category_label}
             </span>
           )}
-          <h3
-            className={`font-headline-sm text-headline-sm text-on-surface line-clamp-2 min-h-[3rem] ${
-              done ? "line-through opacity-50" : ""
-            }`}
-          >
-            {item.title_he || "ללא כותרת"}
-          </h3>
+          <ShrinkToFitTitle
+            text={item.title_he || "ללא כותרת"}
+            className={`font-headline-sm text-on-surface ${done ? "line-through opacity-50" : ""}`}
+          />
         </div>
 
         {/* Status picker — click to open dropdown and change status inline */}
