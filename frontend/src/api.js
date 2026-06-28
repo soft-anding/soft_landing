@@ -69,8 +69,42 @@ const realApi = {
   ask: (payload) =>
     request("/ask", { method: "POST", body: payload }),
 
-  taskAgentChat: (messages) =>
-    request("/task-agent/chat", { method: "POST", body: { messages } }),
+  // The agent's reply streams in as plain text chunks (not JSON) — onChunk is
+  // called with (chunk, fullTextSoFar) as each piece arrives, so the caller
+  // can paint the message incrementally instead of waiting for it to finish.
+  streamTaskAgentChat: async (messages, onChunk) => {
+    const headers = { ...(await authHeader()), "Content-Type": "application/json" };
+    const res = await fetch(`${API_BASE}/api/task-agent/chat`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ messages }),
+    });
+
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = j.detail || detail;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(`${res.status}: ${detail}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let full = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      if (chunk) {
+        full += chunk;
+        onChunk(chunk, full);
+      }
+    }
+    return full;
+  },
 };
 
 // In demo mode, serve mock data with no backend (see demo.js / demoData.js).

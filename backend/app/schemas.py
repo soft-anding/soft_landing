@@ -97,7 +97,3 @@ class TaskAgentMessage(BaseModel):
 
 class TaskAgentChatRequest(BaseModel):
     messages: list[TaskAgentMessage]
-
-
-class TaskAgentChatResponse(BaseModel):
-    reply: str

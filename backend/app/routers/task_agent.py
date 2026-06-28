@@ -5,17 +5,19 @@ can also act on tasks via OpenAI tool-calling: add a custom task, change a
 task's status, or change a task's deadline (see task_actions.py).
 """
 import json
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from openai import OpenAI, OpenAIError
 
 from .. import task_actions
 from ..auth import CurrentUser, get_current_user
-from ..catalog_service import _fetch_user_profile, fetch_items_with_status
+from ..catalog_service import fetch_items_with_status_and_profile
 from ..config import settings
 from ..constants import CUSTOM_TASK_CATEGORIES, STATUSES
-from ..schemas import TaskAgentChatRequest, TaskAgentChatResponse
+from ..schemas import TaskAgentChatRequest
 
 router = APIRouter(prefix="/task-agent", tags=["task-agent"])
 
@@ -144,6 +146,7 @@ TOOLS = [
 ]
 
 
+@lru_cache(maxsize=1)
 def _load_system_prompt() -> str:
     try:
         return _PROMPT_PATH.read_text(encoding="utf-8").strip()
@@ -151,8 +154,7 @@ def _load_system_prompt() -> str:
         return ""
 
 
-def _tasks_context(user_id: str) -> str:
-    items = fetch_items_with_status(user_id, item_type="moving_task")
+def _tasks_context(items: list[dict]) -> str:
     if not items:
         return "למשתמש/ת הזה/זו אין עדיין משימות במערכת."
     lines = []
@@ -166,8 +168,7 @@ def _tasks_context(user_id: str) -> str:
     return "\n".join(lines)
 
 
-def _profile_context(user_id: str) -> str:
-    profile = _fetch_user_profile(user_id)
+def _profile_context(profile: dict) -> str:
     parts = [f"{k}: {v}" for k, v in profile.items() if v]
     return ", ".join(parts) if parts else "אין פרטי פרופיל."
 
@@ -211,66 +212,113 @@ def _execute_tool(user_id: str, name: str, args: dict) -> dict:
         return {"ok": False, "error": str(exc)}
 
 
-def _call_model(client: OpenAI, messages: list[dict]) -> object:
+# Caps worst-case reply latency without affecting the short, focused answers
+# the prompt already asks for (~500 tokens is generous for that).
+_MAX_REPLY_TOKENS = 500
+
+
+def _create_stream(client: OpenAI, messages: list[dict], tools: list[dict] | None = None):
+    kwargs = dict(model=settings.open_ai_model, messages=messages, max_tokens=_MAX_REPLY_TOKENS, stream=True)
+    if tools is not None:
+        kwargs["tools"] = tools
     try:
-        return client.chat.completions.create(
-            model=settings.open_ai_model, messages=messages, tools=TOOLS
-        )
+        return client.chat.completions.create(**kwargs)
     except OpenAIError:
-        return client.chat.completions.create(
-            model=settings.open_ai_model_backup, messages=messages, tools=TOOLS
-        )
+        kwargs["model"] = settings.open_ai_model_backup
+        return client.chat.completions.create(**kwargs)
 
 
-@router.post("/chat", response_model=TaskAgentChatResponse)
+def _stream_reply(client: OpenAI, messages: list[dict], user_id: str):
+    """Yields the assistant's reply text as it's generated. Tool-call rounds
+    produce no visible content (the model doesn't speak while deciding to
+    call a tool), so only the round that actually answers in words streams
+    anything to the caller — earlier rounds just execute tools silently.
+    """
+    try:
+        for _ in range(_MAX_TOOL_ROUNDS):
+            content_parts: list[str] = []
+            tool_calls_acc: dict[int, dict] = {}
+
+            for chunk in _create_stream(client, messages, TOOLS):
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    content_parts.append(delta.content)
+                    yield delta.content
+                for tc_delta in delta.tool_calls or []:
+                    entry = tool_calls_acc.setdefault(tc_delta.index, {"id": "", "name": "", "arguments": ""})
+                    if tc_delta.id:
+                        entry["id"] = tc_delta.id
+                    if tc_delta.function and tc_delta.function.name:
+                        entry["name"] = tc_delta.function.name
+                    if tc_delta.function and tc_delta.function.arguments:
+                        entry["arguments"] += tc_delta.function.arguments
+
+            if not tool_calls_acc:
+                return  # final answer already streamed above
+
+            ordered_calls = [tool_calls_acc[i] for i in sorted(tool_calls_acc)]
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": "".join(content_parts) or None,
+                    "tool_calls": [
+                        {
+                            "id": tc["id"],
+                            "type": "function",
+                            "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                        }
+                        for tc in ordered_calls
+                    ],
+                }
+            )
+            for tc in ordered_calls:
+                args = json.loads(tc["arguments"] or "{}")
+                result = _execute_tool(user_id, tc["name"], args)
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": json.dumps(result, ensure_ascii=False),
+                    }
+                )
+        # Ran out of tool-call rounds — stream one final answer without tools.
+        for chunk in _create_stream(client, messages):
+            delta = chunk.choices[0].delta
+            if delta.content:
+                yield delta.content
+    except OpenAIError as exc:
+        yield f"\n\n⚠️ שגיאה בפנייה לסוכן ה-AI: {exc}"
+
+
+@router.post("/chat")
 def chat(
     payload: TaskAgentChatRequest,
     user: CurrentUser = Depends(get_current_user),
-) -> TaskAgentChatResponse:
+) -> StreamingResponse:
+    """Streams the assistant's reply as plain text chunks as they're generated,
+    instead of waiting for the full reply before responding — the OpenAI call
+    itself is the dominant cost (2-7s), so this is what makes the chat feel
+    responsive instead of frozen for several seconds.
+    """
     if not settings.tasks_agent_openai_api_key:
         raise HTTPException(status_code=503, detail="מפתח ה-API של סוכן המשימות לא הוגדר בשרת.")
 
     system_prompt = _load_system_prompt()
+    # Fetches the profile and the task list in one parallel batch (instead of
+    # the profile first and everything else after) — shaves the pre-stream
+    # delay down to roughly the slowest single query instead of two stages.
+    items, profile = fetch_items_with_status_and_profile(user.id, item_type="moving_task")
     context = (
         f"{system_prompt}\n\n"
         f"להלן המשימות הנוכחיות של המשתמש/ת לקראת המעבר (item_type#item_id לשימוש בכלים):\n"
-        f"{_tasks_context(user.id)}\n\n"
-        f"פרטי פרופיל המשתמש/ת: {_profile_context(user.id)}"
+        f"{_tasks_context(items)}\n\n"
+        f"פרטי פרופיל המשתמש/ת: {_profile_context(profile)}"
     )
 
     messages: list[dict] = [{"role": "system", "content": context}]
     messages += [{"role": m.role, "content": m.content} for m in payload.messages]
 
     client = OpenAI(api_key=settings.tasks_agent_openai_api_key)
-
-    try:
-        for _ in range(_MAX_TOOL_ROUNDS):
-            completion = _call_model(client, messages)
-            choice = completion.choices[0].message
-            tool_calls = choice.tool_calls or []
-
-            if not tool_calls:
-                return TaskAgentChatResponse(reply=choice.content or "")
-
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": choice.content,
-                    "tool_calls": [tc.model_dump() for tc in tool_calls],
-                }
-            )
-            for tc in tool_calls:
-                args = json.loads(tc.function.arguments or "{}")
-                result = _execute_tool(user.id, tc.function.name, args)
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "content": json.dumps(result, ensure_ascii=False),
-                    }
-                )
-        # Ran out of tool-call rounds — ask once more without tools for a final answer.
-        final = client.chat.completions.create(model=settings.open_ai_model, messages=messages)
-        return TaskAgentChatResponse(reply=final.choices[0].message.content or "")
-    except OpenAIError as exc:
-        raise HTTPException(status_code=502, detail=f"שגיאה בפנייה לסוכן ה-AI: {exc}") from exc
+    return StreamingResponse(
+        _stream_reply(client, messages, user.id), media_type="text/plain; charset=utf-8"
+    )

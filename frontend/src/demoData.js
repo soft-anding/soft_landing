@@ -259,6 +259,10 @@ export const demoApi = {
     return delay({ ...it });
   },
 
-  taskAgentChat: () =>
-    delay({ reply: "זה מצב הדגמה — הסוכן עדיין לא מחובר כאן." }),
+  streamTaskAgentChat: async (_messages, onChunk) => {
+    const text = "זה מצב הדגמה — הסוכן עדיין לא מחובר כאן.";
+    await delay(null);
+    onChunk(text, text);
+    return text;
+  },
 };

@@ -74,19 +74,32 @@ export default function TaskAgentChat({ open, onClose }) {
     setFile(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setSending(true);
+    // Placeholder bubble that fills in as the reply streams, instead of
+    // appearing all at once once the whole reply is ready.
+    setMessages((prev) => [...prev, { role: "assistant", text: "" }]);
     try {
-      const { reply } = await api.taskAgentChat(
-        nextMessages.map((m) => ({ role: m.role, content: m.text }))
+      await api.streamTaskAgentChat(
+        nextMessages.map((m) => ({ role: m.role, content: m.text })),
+        (_chunk, full) => {
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", text: full };
+            return updated;
+          });
+        }
       );
-      setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
       // The agent may have changed/added a task server-side — tell the
       // Dashboard (if mounted) to refetch instead of showing stale counts.
       window.dispatchEvent(new Event("tasks-changed"));
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: "מצטערים, הייתה שגיאה בפנייה לסוכן. נסו שוב." },
-      ]);
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "assistant",
+          text: "מצטערים, הייתה שגיאה בפנייה לסוכן. נסו שוב.",
+        };
+        return updated;
+      });
     } finally {
       setSending(false);
     }
@@ -132,27 +145,24 @@ export default function TaskAgentChat({ open, onClose }) {
 
       <div className="flex-1 overflow-y-auto px-md py-md space-y-xs">
         {messages.length > 0 && (
-          messages.map((m, i) => (
-            <div key={i} className="flex">
-              <div
-                dir="rtl"
-                className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed text-black text-right break-words ${
-                  m.role === "user"
-                    ? "bg-white border border-gray-300 mr-auto"
-                    : "bg-gray-100 ml-auto"
-                }`}
-              >
-                {m.text}
+          messages.map((m, i) => {
+            const isLast = i === messages.length - 1;
+            const isTyping = sending && isLast && m.role === "assistant" && !m.text;
+            return (
+              <div key={i} className="flex">
+                <div
+                  dir="rtl"
+                  className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed text-black text-right break-words ${
+                    m.role === "user"
+                      ? "bg-white border border-gray-300 mr-auto"
+                      : "bg-gray-100 ml-auto"
+                  }`}
+                >
+                  {isTyping ? "…" : m.text}
+                </div>
               </div>
-            </div>
-          ))
-        )}
-        {sending && (
-          <div className="flex">
-            <div className="max-w-[80%] px-3 py-2 rounded-2xl text-xs text-black bg-gray-100 ml-auto">
-              …
-            </div>
-          </div>
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

@@ -2,6 +2,7 @@
 the current user's per-item status. The service-role client bypasses RLS, so
 user data is always filtered by user_id here.
 """
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from .config import settings
@@ -345,30 +346,15 @@ def fetch_user_status_map(user_id: str) -> dict[tuple[str, int], dict]:
     return {(r["item_type"], r["item_id"]): r for r in rows}
 
 
-def fetch_items_with_status(
-    user_id: str,
-    category: str | None = None,
-    item_type: str | None = None,
-    city_slug: str | None = None,
+def _merge_and_filter(
+    catalog: list[dict],
+    custom_items: list[dict],
+    status_map: dict,
+    profile: dict,
+    category: str | None,
+    item_type: str | None,
 ) -> list[dict]:
-    profile = _fetch_user_profile(user_id)
-    # rights_items/moving_tasks never pass the custom_task filter below (and
-    # vice versa for rights_items under the moving_task filter), so there's
-    # no point fetching the catalog at all when only custom_task is wanted.
-    catalog = (
-        []
-        if item_type == "custom_task"
-        else fetch_catalog(city_slug=city_slug, include_rights=item_type != "moving_task")
-    )
-    # Custom tasks appear whenever moving_task or custom_task type is
-    # requested (or no filter at all) — see also ItemDetail.jsx, which fetches
-    # by the item's own type to render a single item's page.
-    include_custom = item_type in (None, "moving_task", "custom_task")
-    custom_items = fetch_user_custom_tasks(user_id) if include_custom else []
-
     user_tags = _profile_tags(profile)
-
-    status_map = fetch_user_status_map(user_id)
     items: list[dict] = []
     for item in catalog + custom_items:
         if category and item["category"] != category:
@@ -406,3 +392,76 @@ def fetch_items_with_status(
         }
         items.append(item)
     return items
+
+
+def _fetch_catalog_custom_status(
+    user_id: str, item_type: str | None, city_slug: str | None, pool: ThreadPoolExecutor
+):
+    """Submits the 3 independent non-profile queries to an existing thread
+    pool and returns their futures — split out so callers can add the
+    profile fetch into the same pool batch instead of running it separately.
+    """
+    # rights_items/moving_tasks never pass the custom_task filter below (and
+    # vice versa for rights_items under the moving_task filter), so there's
+    # no point fetching the catalog at all when only custom_task is wanted.
+    # Custom tasks appear whenever moving_task or custom_task type is
+    # requested (or no filter at all) — see also ItemDetail.jsx, which fetches
+    # by the item's own type to render a single item's page.
+    include_custom = item_type in (None, "moving_task", "custom_task")
+    catalog_future = pool.submit(
+        lambda: [] if item_type == "custom_task" else fetch_catalog(city_slug=city_slug, include_rights=item_type != "moving_task")
+    )
+    custom_future = pool.submit(fetch_user_custom_tasks, user_id) if include_custom else None
+    status_future = pool.submit(fetch_user_status_map, user_id)
+    return catalog_future, custom_future, status_future
+
+
+def fetch_items_with_status(
+    user_id: str,
+    category: str | None = None,
+    item_type: str | None = None,
+    city_slug: str | None = None,
+    profile: dict | None = None,
+) -> list[dict]:
+    # These are independent Supabase round trips — running them concurrently
+    # instead of one-after-another cuts the wall-clock cost down to roughly
+    # the slowest single call instead of the sum of all of them. Callers that
+    # already have the profile (e.g. the task agent, which also needs it for
+    # the chat context) can pass it in to skip re-fetching it here.
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        profile_future = None if profile is not None else pool.submit(_fetch_user_profile, user_id)
+        catalog_future, custom_future, status_future = _fetch_catalog_custom_status(
+            user_id, item_type, city_slug, pool
+        )
+
+        if profile_future is not None:
+            profile = profile_future.result()
+        catalog = catalog_future.result()
+        custom_items = custom_future.result() if custom_future is not None else []
+        status_map = status_future.result()
+
+    return _merge_and_filter(catalog, custom_items, status_map, profile, category, item_type)
+
+
+def fetch_items_with_status_and_profile(
+    user_id: str, item_type: str | None = None
+) -> tuple[list[dict], dict]:
+    """Same as fetch_items_with_status, but fetches the user's profile in the
+    same parallel batch as everything else and returns it alongside the
+    items — for callers (the task agent's chat context) that need both and
+    would otherwise pay for the profile round trip a second time, or lose the
+    parallelism by fetching it sequentially beforehand.
+    """
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        profile_future = pool.submit(_fetch_user_profile, user_id)
+        catalog_future, custom_future, status_future = _fetch_catalog_custom_status(
+            user_id, item_type, None, pool
+        )
+
+        profile = profile_future.result()
+        catalog = catalog_future.result()
+        custom_items = custom_future.result() if custom_future is not None else []
+        status_map = status_future.result()
+
+    items = _merge_and_filter(catalog, custom_items, status_map, profile, None, item_type)
+    return items, profile
