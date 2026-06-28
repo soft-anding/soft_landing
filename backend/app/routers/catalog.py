@@ -26,7 +26,7 @@ def list_categories(_user: CurrentUser = Depends(get_current_user)) -> list[Cate
 def list_items(
     user: CurrentUser = Depends(get_current_user),
     category: str | None = Query(default=None),
-    type: str | None = Query(default=None, pattern="^(moving_task|rights_item)$"),
+    type: str | None = Query(default=None, pattern="^(moving_task|rights_item|custom_task)$"),
     city: str | None = Query(default=None, description="Destination city slug (e.g. 'jerusalem', 'tel_aviv')"),
 ) -> list[Item]:
     return fetch_items_with_status(user.id, category=category, item_type=type, city_slug=city)

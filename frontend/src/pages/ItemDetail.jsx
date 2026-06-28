@@ -190,7 +190,6 @@ export default function ItemDetail() {
                 disabled={saving}
                 className="mt-md w-full h-12 bg-primary hover:bg-primary/90 text-on-primary rounded-full font-label-md transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-xs"
               >
-                <span className="material-symbols-outlined text-base">save</span>
                 {saving ? "שומר…" : "שמירה"}
               </button>
               {saved && <p className="mt-sm text-primary text-label-md text-center">נשמר ✓</p>}

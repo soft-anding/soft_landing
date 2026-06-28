@@ -295,11 +295,18 @@ def fetch_items_with_status(
     city_slug: str | None = None,
 ) -> list[dict]:
     profile = _fetch_user_profile(user_id)
-    # rights_items never pass the moving_task/custom_task filter below, so
-    # there's no point fetching them at all in that case.
-    catalog = fetch_catalog(city_slug=city_slug, include_rights=item_type != "moving_task")
-    # Custom tasks appear whenever moving_task type is requested (or no filter)
-    include_custom = item_type is None or item_type == "moving_task"
+    # rights_items/moving_tasks never pass the custom_task filter below (and
+    # vice versa for rights_items under the moving_task filter), so there's
+    # no point fetching the catalog at all when only custom_task is wanted.
+    catalog = (
+        []
+        if item_type == "custom_task"
+        else fetch_catalog(city_slug=city_slug, include_rights=item_type != "moving_task")
+    )
+    # Custom tasks appear whenever moving_task or custom_task type is
+    # requested (or no filter at all) — see also ItemDetail.jsx, which fetches
+    # by the item's own type to render a single item's page.
+    include_custom = item_type in (None, "moving_task", "custom_task")
     custom_items = fetch_user_custom_tasks(user_id) if include_custom else []
 
     user_tags = _profile_tags(profile)

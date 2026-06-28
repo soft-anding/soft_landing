@@ -49,9 +49,7 @@ export default function NotificationsBell() {
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  function closeAndMarkRead() {
-    setOpen(false);
-    setExpanded(false);
+  function markAllRead() {
     if (unreadCount === 0) return;
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     supabase
@@ -61,6 +59,12 @@ export default function NotificationsBell() {
       .eq("is_read", false)
       .then(() => {})
       .catch(() => {});
+  }
+
+  function closeAndMarkRead() {
+    setOpen(false);
+    setExpanded(false);
+    markAllRead();
   }
 
   useEffect(() => {
@@ -93,16 +97,24 @@ export default function NotificationsBell() {
 
       {open && (
         <div className="absolute left-0 top-full mt-sm w-96 bg-white rounded-2xl soft-shadow border border-outline-variant/30 overflow-hidden text-right">
-          <div className="flex items-center justify-between px-md py-sm border-b border-outline-variant/30">
-            <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">התראות</h3>
+          <div className="relative px-md py-sm border-b border-outline-variant/30">
             <button
               type="button"
               onClick={closeAndMarkRead}
               aria-label="סגור"
-              className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
+              className="absolute top-sm right-sm w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
             >
               <span className="material-symbols-outlined text-base">close</span>
             </button>
+            <button
+              type="button"
+              onClick={markAllRead}
+              disabled={unreadCount === 0}
+              className="absolute top-sm left-sm font-label-sm text-label-sm text-primary underline hover:no-underline disabled:text-on-surface-variant/40 disabled:no-underline disabled:cursor-default"
+            >
+              סמן הכל כנקרא
+            </button>
+            <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface pr-8">התראות</h3>
           </div>
 
           {notifications.length === 0 ? (
