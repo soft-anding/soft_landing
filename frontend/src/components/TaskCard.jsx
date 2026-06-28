@@ -239,7 +239,7 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
 
   return (
     <div
-      className={`bg-white rounded-xl border soft-shadow flex flex-col min-h-32 transition-all duration-200 ${
+      className={`bg-white rounded-2xl border soft-shadow flex flex-col min-h-32 transition-all duration-200 ${
         done ? "border-primary/40" : "border-outline-variant/30"
       }`}
     >

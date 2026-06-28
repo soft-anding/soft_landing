@@ -28,19 +28,18 @@ function RequireAuth({ children }) {
   return children;
 }
 
-// Agent is only relevant on the dashboard and rights/benefits pages — not on
+// Agent is only relevant on the dashboard page — not on rights/benefits,
 // category/item detail pages, documents, onboarding, etc.
-const AGENT_PATHS = ["/dashboard", "/rights"];
+const AGENT_PATHS = ["/dashboard"];
 
 export default function App() {
   const { session, userProfile, loading } = useAuth();
   const location = useLocation();
   const [agentOpen, setAgentOpen] = useState(false);
 
-  // Lives above <Routes> (not inside Dashboard/RightsBenefits) so switching
-  // between those two pages doesn't unmount it and lose the conversation —
-  // only "סיים שיחה" inside the chat itself should reset it. Navigating to
-  // any other page (category/item detail, documents, ...) does unmount it.
+  // Lives above <Routes> (not inside Dashboard) so it stays mounted across
+  // re-renders of the dashboard itself — only "סיים שיחה" inside the chat
+  // resets it. Navigating to any other page unmounts it.
   const showAgent = Boolean(session && userProfile) && AGENT_PATHS.includes(location.pathname);
 
   return (
