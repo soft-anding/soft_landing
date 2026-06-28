@@ -53,6 +53,10 @@ const realApi = {
   setStatus: (itemType, itemId, payload) =>
     request(`/items/${itemType}/${itemId}/status`, { method: "PUT", body: payload }),
 
+  forms: (city) => request(`/forms${city ? `?city=${city}` : ""}`),
+  setFormChecked: (formId, checked) =>
+    request(`/forms/${formId}/checked`, { method: "PUT", body: { checked } }),
+
   createCustomTask: (payload) =>
     request("/custom-tasks", { method: "POST", body: payload }),
 

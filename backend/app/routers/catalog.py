@@ -4,9 +4,9 @@ from collections import Counter
 from fastapi import APIRouter, Depends, Query
 
 from ..auth import CurrentUser, get_current_user
-from ..catalog_service import fetch_catalog, fetch_items_with_status
+from ..catalog_service import fetch_catalog, fetch_forms, fetch_items_with_status
 from ..constants import category_label
-from ..schemas import Category, Item
+from ..schemas import Category, Form, Item
 
 router = APIRouter(tags=["catalog"])
 
@@ -30,3 +30,11 @@ def list_items(
     city: str | None = Query(default=None, description="Destination city slug (e.g. 'jerusalem', 'tel_aviv')"),
 ) -> list[Item]:
     return fetch_items_with_status(user.id, category=category, item_type=type, city_slug=city)
+
+
+@router.get("/forms", response_model=list[Form])
+def list_forms(
+    user: CurrentUser = Depends(get_current_user),
+    city: str | None = Query(default=None, description="Destination city slug (e.g. 'jerusalem', 'tel_aviv')"),
+) -> list[Form]:
+    return fetch_forms(city_slug=city, user_id=user.id)

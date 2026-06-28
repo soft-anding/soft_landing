@@ -9,6 +9,8 @@ from ..schemas import (
     CustomTaskContentUpdate,
     CustomTaskCreate,
     DeadlineUpdate,
+    Form,
+    FormCheckedUpdate,
     Item,
     ProgressSummary,
     StatusUpdate,
@@ -212,6 +214,38 @@ def update_custom_task_content(
         next_action=current.get("next_action"),
         deadline_type=current.get("deadline_type") or item.get("deadline_type"),
         deadline_date=str(current["deadline_date"]) if current.get("deadline_date") else item.get("deadline_date"),
+    )
+
+
+@router.put("/forms/{form_id}/checked", response_model=Form)
+def set_form_checked(
+    payload: FormCheckedUpdate,
+    form_id: int = Path(..., ge=1),
+    user: CurrentUser = Depends(get_current_user),
+) -> Form:
+    sb = get_supabase()
+
+    rows = sb.table("forms").select("id,name,category,file_url,is_external,notes").eq("id", form_id).limit(1).execute().data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Form not found.")
+
+    sb.table("user_form_status").upsert(
+        {"user_id": user.id, "form_id": form_id, "checked": payload.checked},
+        on_conflict="user_id,form_id",
+    ).execute()
+
+    form = rows[0]
+    file_url = form.get("file_url")
+    if file_url == "NULL":
+        file_url = None
+    return Form(
+        id=form["id"],
+        name=form.get("name"),
+        category=form.get("category"),
+        file_url=file_url,
+        is_external=bool(form.get("is_external")),
+        notes=form.get("notes"),
+        checked=payload.checked,
     )
 
 

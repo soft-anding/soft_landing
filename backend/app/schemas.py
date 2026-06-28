@@ -68,6 +68,20 @@ class DeadlineUpdate(BaseModel):
     deadline_date: str | None = None  # ISO date string, required when deadline_type='specific_date'
 
 
+class Form(BaseModel):
+    id: int
+    name: str
+    category: str | None = None
+    file_url: str | None = None
+    is_external: bool = False
+    notes: str | None = None
+    checked: bool = False
+
+
+class FormCheckedUpdate(BaseModel):
+    checked: bool
+
+
 class ProgressSummary(BaseModel):
     total: int
     tracked: int

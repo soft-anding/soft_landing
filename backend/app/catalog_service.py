@@ -208,6 +208,57 @@ def fetch_catalog(city_slug: str | None = None, include_rights: bool = True) -> 
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
 
 
+def _normalize_form(row: dict, checked: bool) -> dict:
+    # file_url is the literal string "NULL" (not real null) for a couple of
+    # live rows — a data quirk in the forms table — so it must be normalized
+    # here before it ever reaches the API response.
+    file_url = row.get("file_url")
+    if file_url == "NULL":
+        file_url = None
+    return {
+        "id": row["id"],
+        "name": row.get("name"),
+        "category": row.get("category"),
+        "file_url": file_url,
+        "is_external": bool(row.get("is_external")),
+        "notes": row.get("notes"),
+        "checked": checked,
+    }
+
+
+def fetch_forms(city_slug: str | None, user_id: str) -> list[dict]:
+    """Forms relevant to a city: city_id=0 means "both cities", otherwise
+    the row only applies to the matching city (1=Jerusalem, 2=Tel Aviv).
+    Merges in the user's own checked state from user_form_status.
+    """
+    sb = get_supabase()
+    rows = (
+        sb.table("forms")
+        .select("id,name,category,file_url,city_id,is_external,notes")
+        .execute()
+        .data
+        or []
+    )
+
+    city_id = _resolve_city_id(city_slug) if city_slug else None
+    if city_id is not None:
+        rows = [r for r in rows if r.get("city_id") in (0, city_id)]
+
+    checked_ids: set[int] = set()
+    if rows:
+        status_rows = (
+            sb.table("user_form_status")
+            .select("form_id,checked")
+            .eq("user_id", user_id)
+            .execute()
+            .data
+            or []
+        )
+        checked_ids = {r["form_id"] for r in status_rows if r.get("checked")}
+
+    return [_normalize_form(r, checked=r["id"] in checked_ids) for r in rows]
+
+
 def fetch_user_custom_tasks(user_id: str) -> list[dict]:
     """Return normalized custom task items for a user, without status merged in."""
     sb = get_supabase()
