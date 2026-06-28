@@ -189,7 +189,7 @@ const tasks = [
       'אם המעבר הוא באמצע שנת לימודים, תאמו עם מנהל/ת המסגרת על קליטה מסודרת.',
       'תאמו העברת תיק תלמיד מהמסגרת הקודמת למסגרת החדשה.',
     ],
-    category: 'education',
+    category: 'חינוך',
     relevance_rule: { moving_companions: ['with_family'] },
     is_niche: true,
     timeline_stage: 'before_move',

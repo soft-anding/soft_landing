@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { api } from "../api";
 import { supabase } from "../supabaseClient";
 
 // ── Shared style tokens ───────────────────────────────────────────────────────
@@ -54,22 +53,13 @@ function YesNo({ id, value, onChange }) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function OnboardingStep3() {
-  const { form, setForm }                 = useOutletContext();
+  const { form, setForm, categories, catsLoading } = useOutletContext();
   const { user, refreshProfile }          = useAuth();
   const navigate                          = useNavigate();
 
-  const [categories, setCategories]       = useState([]);
-  const [catsLoading, setCatsLoading]     = useState(true);
   const [submitting, setSubmitting]       = useState(false);
   const [errors, setErrors]               = useState({});
   const [submitError, setSubmitError]     = useState(null);
-
-  useEffect(() => {
-    api.categories()
-      .then((cats) => setCategories(cats || []))
-      .catch(() => setCategories([]))
-      .finally(() => setCatsLoading(false));
-  }, []);
 
   function set(fieldName, value) {
     setForm((f) => ({ ...f, [fieldName]: value }));

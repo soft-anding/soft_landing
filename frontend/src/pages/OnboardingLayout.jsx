@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { api } from "../api";
 import Spinner from "../components/Spinner";
 
 export const EMPTY_FORM = {
@@ -35,10 +36,22 @@ export default function OnboardingLayout() {
   const { session, userProfile, loading } = useAuth();
   const location = useLocation();
   const [form, setForm] = useState(EMPTY_FORM);
+  const [categories, setCategories] = useState([]);
+  const [catsLoading, setCatsLoading] = useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // Fetched here (step 1) instead of in OnboardingStep3 so the list is
+  // already loaded by the time the user reaches step 3, instead of making
+  // them wait on navigation there.
+  useEffect(() => {
+    api.categories()
+      .then((cats) => setCategories(cats || []))
+      .catch(() => setCategories([]))
+      .finally(() => setCatsLoading(false));
+  }, []);
 
   if (loading) return <Spinner full />;
   if (!session) return <Navigate to="/" replace />;
@@ -109,7 +122,7 @@ export default function OnboardingLayout() {
 
         {/* Card body — step content */}
         <div className="px-md pt-md pb-lg md:px-lg">
-          <Outlet context={{ form, setForm }} />
+          <Outlet context={{ form, setForm, categories, catsLoading }} />
         </div>
       </div>
     </div>

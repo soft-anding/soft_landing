@@ -47,7 +47,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   parking_permit:       'תו חניה אזורי',
   senior_benefits:      'הטבות לאזרחים ותיקים',
   address_update:       'עדכון כתובת',
-  education:            'חינוך',
 };
 
 function catLabel(slug: string | null): string {

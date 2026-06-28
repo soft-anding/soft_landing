@@ -25,7 +25,6 @@ ITEM_TYPES = ("moving_task", "rights_item", "custom_task")
 # to free Hebrew text. (moving_tasks.category is itself free Hebrew text, not
 # a slug — see CUSTOM_TASK_CATEGORIES below — so it needs no lookup here.)
 CATEGORY_LABELS: dict[str, str] = {
-    "education": "חינוך",
     "other": "כללי",
     "rights_general": "זכויות כלליות",
     "arnona_general": "ארנונה",
