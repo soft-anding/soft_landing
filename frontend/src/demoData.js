@@ -122,7 +122,7 @@ let ITEMS = [
     required_documents: [],
     discount_amount: null,
     deadlines: null,
-    status: "דורש בדיקה",
+    status: "בבדיקה",
     notes: "",
     next_action: null,
   },

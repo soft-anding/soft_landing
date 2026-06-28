@@ -4,14 +4,13 @@ Keep STATUSES in sync with the CHECK constraint in
 supabase/migrations/0002_user_tracking.sql.
 """
 
-# The 7 allowed statuses, in display order. Do not invent new ones (spec §5, §8).
+# The 6 allowed statuses, in display order. Do not invent new ones (spec §5, §8).
 STATUSES: list[str] = [
     "לא התחיל",
     "בבדיקה",
     "בטיפול",
     "הושלם",
     "לא רלוונטי",
-    "דורש בדיקה",
     "ממתין לגורם חיצוני",
 ]
 

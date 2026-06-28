@@ -2,7 +2,7 @@
 
 A calm, Hebrew (RTL) web app that turns moving to Tel Aviv into a clear, trackable checklist.
 Users sign in with Google, browse a knowledge base of moving tasks and rights/benefits grouped by
-category, set a status on each item (7 fixed statuses), add personal notes, and watch their overall
+category, set a status on each item (6 fixed statuses), add personal notes, and watch their overall
 progress.
 
 ## Stack
@@ -36,8 +36,8 @@ The Supabase project already contains the scraped knowledge base: `cities`, `rig
 - `user_item_status` — a user's status / notes / next-action for each item. RLS restricts every row
   to its owner (`auth.uid() = user_id`).
 
-The 7 allowed statuses (spec §5): `לא התחיל`, `בבדיקה`, `בטיפול`, `הושלם`, `לא רלוונטי`,
-`דורש בדיקה`, `ממתין לגורם חיצוני`.
+The 6 allowed statuses (spec §5): `לא התחיל`, `בבדיקה`, `בטיפול`, `הושלם`, `לא רלוונטי`,
+`ממתין לגורם חיצוני`.
 
 > The seeded items currently have `verified = false`. The backend shows them anyway because
 > `SHOW_UNVERIFIED=true`. Set it to `false` once items are reviewed and flipped to `verified = true`.
@@ -125,7 +125,7 @@ All routes are under `/api` and require `Authorization: Bearer <supabase access 
 | Method | Path                                      | Purpose                                  |
 | ------ | ----------------------------------------- | ---------------------------------------- |
 | GET    | `/api/health`                             | liveness                                 |
-| GET    | `/api/statuses`                           | the 7 fixed statuses                     |
+| GET    | `/api/statuses`                           | the 6 fixed statuses                     |
 | GET    | `/api/me`                                 | current user id/email                    |
 | GET    | `/api/categories`                         | categories with item counts             |
 | GET    | `/api/items?category=&type=`              | items + the user's status               |

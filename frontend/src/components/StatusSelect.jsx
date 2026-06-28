@@ -1,6 +1,6 @@
 import { STATUSES, STATUS_ICON, statusStyle } from "../statusConfig";
 
-// A pill <select> for choosing one of the 7 fixed statuses.
+// A pill <select> for choosing one of the 6 fixed statuses.
 export default function StatusSelect({ value, onChange, disabled }) {
   return (
     <label className={`inline-flex items-center gap-xs rounded-full border px-3 py-1.5 ${statusStyle(value)}`}>

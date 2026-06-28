@@ -53,7 +53,7 @@ api.include_router(internal.router)
 
 @api.get("/statuses", tags=["meta"])
 def list_statuses() -> list[str]:
-    """The 7 fixed statuses, in display order."""
+    """The 6 fixed statuses, in display order."""
     return STATUSES
 
 

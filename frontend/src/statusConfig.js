@@ -1,4 +1,4 @@
-// The 7 fixed statuses (spec §5) with display styling for chips.
+// The 6 fixed statuses (spec §5) with display styling for chips.
 // Keep in sync with the backend constants / DB CHECK constraint.
 export const STATUSES = [
   "לא התחיל",
@@ -6,7 +6,6 @@ export const STATUSES = [
   "בטיפול",
   "הושלם",
   "לא רלוונטי",
-  "דורש בדיקה",
   "ממתין לגורם חיצוני",
 ];
 
@@ -17,7 +16,6 @@ export const STATUS_STYLES = {
   בטיפול: "bg-secondary-container/50 text-on-secondary-container border-secondary-container",
   הושלם: "bg-primary text-on-primary border-primary",
   "לא רלוונטי": "bg-surface-dim text-on-surface-variant border-outline-variant",
-  "דורש בדיקה": "bg-error-container text-on-error-container border-error-container",
   "ממתין לגורם חיצוני": "bg-primary-fixed text-on-primary-container border-primary-fixed-dim",
 };
 
@@ -27,7 +25,6 @@ export const STATUS_ICON = {
   בטיפול: "pending",
   הושלם: "check_circle",
   "לא רלוונטי": "block",
-  "דורש בדיקה": "help",
   "ממתין לגורם חיצוני": "hourglass_top",
 };
 
