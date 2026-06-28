@@ -190,17 +190,21 @@ def _profile_tags(profile: dict | None) -> set[str]:
     return tags
 
 
-def fetch_catalog(city_slug: str | None = None) -> list[dict]:
+def fetch_catalog(city_slug: str | None = None, include_rights: bool = True) -> list[dict]:
     """All catalog items (tasks + rights), normalized, without user status.
 
     moving_tasks are city-agnostic and always included.
     rights_items are filtered to city_slug when provided.
+    include_rights=False skips the rights_items query entirely — for callers
+    that only want moving_task items (e.g. progress totals, the task-agent's
+    context), fetching every rights_item just to discard it was a wasted
+    round trip that made every status update feel slow.
     """
     tasks = _fetch_table(
         "moving_tasks",
         "id,title_he,summary,action_steps,related_links,category,source_url,tags,relevance_rule,timeline_stage",
     )
-    rights = _fetch_rights_items(city_slug=city_slug)
+    rights = _fetch_rights_items(city_slug=city_slug) if include_rights else []
     return [_normalize_task(r) for r in tasks] + [_normalize_right(r) for r in rights]
 
 
@@ -291,7 +295,9 @@ def fetch_items_with_status(
     city_slug: str | None = None,
 ) -> list[dict]:
     profile = _fetch_user_profile(user_id)
-    catalog = fetch_catalog(city_slug=city_slug)
+    # rights_items never pass the moving_task/custom_task filter below, so
+    # there's no point fetching them at all in that case.
+    catalog = fetch_catalog(city_slug=city_slug, include_rights=item_type != "moving_task")
     # Custom tasks appear whenever moving_task type is requested (or no filter)
     include_custom = item_type is None or item_type == "moving_task"
     custom_items = fetch_user_custom_tasks(user_id) if include_custom else []

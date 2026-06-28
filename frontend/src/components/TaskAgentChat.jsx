@@ -32,6 +32,11 @@ export default function TaskAgentChat({ open, onClose }) {
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
   const textareaRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, sending]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +77,9 @@ export default function TaskAgentChat({ open, onClose }) {
         nextMessages.map((m) => ({ role: m.role, content: m.text }))
       );
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+      // The agent may have changed/added a task server-side — tell the
+      // Dashboard (if mounted) to refetch instead of showing stale counts.
+      window.dispatchEvent(new Event("tasks-changed"));
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -144,6 +152,7 @@ export default function TaskAgentChat({ open, onClose }) {
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {file && (

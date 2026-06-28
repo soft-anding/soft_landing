@@ -7,6 +7,7 @@ import Spinner from "../components/Spinner";
 import TaskCard from "../components/TaskCard";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
+import { STATUSES } from "../statusConfig";
 
 // ── Hebrew city labels ────────────────────────────────────────────────────────
 const CITY_LABELS = { jerusalem: "ירושלים", tel_aviv: "תל אביב" };
@@ -48,6 +49,23 @@ function getCategorySummaries(tasks) {
     ...g,
     percentage: g.total > 0 ? Math.round((g.completed / g.total) * 100) : 0,
   }));
+}
+
+// ── Derive the header's progress summary from the already-known tasks array —
+// mirrors the backend's /progress computation exactly, so the header updates
+// instantly on a status change instead of waiting on a second round trip.
+function computeProgress(tasks) {
+  const by_status = Object.fromEntries(STATUSES.map((s) => [s, 0]));
+  for (const it of tasks) by_status[it.status] = (by_status[it.status] || 0) + 1;
+  const total = tasks.length;
+  const completed = by_status["הושלם"] || 0;
+  return {
+    total,
+    tracked: total,
+    completed,
+    completed_pct: total ? Math.round((completed / total) * 100) : 0,
+    by_status,
+  };
 }
 
 // ── Inline SVG donut/ring chart ───────────────────────────────────────────────
@@ -446,34 +464,48 @@ export default function Dashboard() {
 
   useEffect(() => {
     let alive = true;
+    function load(showSpinner) {
+      if (showSpinner) setLoading(true);
+      Promise.all([
+        api.progress(),
+        api.items({ type: "moving_task" }),
+        api.items({ type: "rights_item", city: destinationCity }),
+      ])
+        .then(([p, t, r]) => {
+          if (!alive) return;
+          setProgress(p);
+          setTasks(t);
+          setRights(r);
+          writeCache(cacheKey, { progress: p, tasks: t, rights: r });
+        })
+        .catch((e) => alive && setError(e.message))
+        .finally(() => alive && showSpinner && setLoading(false));
+    }
     // Only show the spinner when there's nothing cached to show meanwhile —
     // this still refetches fresh data every mount, just silently.
-    if (!readCache(cacheKey)) setLoading(true);
-    Promise.all([
-      api.progress(),
-      api.items({ type: "moving_task" }),
-      api.items({ type: "rights_item", city: destinationCity }),
-    ])
-      .then(([p, t, r]) => {
-        if (!alive) return;
-        setProgress(p);
-        setTasks(t);
-        setRights(r);
-        writeCache(cacheKey, { progress: p, tasks: t, rights: r });
-      })
-      .catch((e) => alive && setError(e.message))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
+    load(!readCache(cacheKey));
+
+    // The task-AI chat changes tasks server-side with no direct callback into
+    // this component, so it broadcasts this event instead — refetch silently
+    // (no spinner) so the header/list pick up the change right away instead
+    // of waiting for the next mount.
+    function onTasksChanged() { load(false); }
+    window.addEventListener("tasks-changed", onTasksChanged);
+
+    return () => {
+      alive = false;
+      window.removeEventListener("tasks-changed", onTasksChanged);
+    };
   }, [destinationCity]);
 
   const handleTaskCreated = (newItem) => {
     setTasks((prev) => {
       const next = [...prev, newItem];
-      writeCache(cacheKey, { progress, tasks: next, rights });
+      const nextProgress = computeProgress(next);
+      setProgress(nextProgress);
+      writeCache(cacheKey, { progress: nextProgress, tasks: next, rights });
       return next;
     });
-    // Refresh progress so total/completed counts update
-    api.progress().then(setProgress).catch(() => {});
   };
 
   const handleStatusChange = async (item, status) => {
@@ -489,11 +521,11 @@ export default function Dashboard() {
         const next = prev.map((it) =>
           it.item_type === updated.item_type && it.item_id === updated.item_id ? updated : it
         );
-        writeCache(cacheKey, { progress, tasks: next, rights });
+        const nextProgress = computeProgress(next);
+        setProgress(nextProgress);
+        writeCache(cacheKey, { progress: nextProgress, tasks: next, rights });
         return next;
       });
-      // Status changes affect completed/total counts in the header — refresh it too.
-      api.progress().then(setProgress).catch(() => {});
     } catch (e) {
       setError(e.message);
     } finally {
