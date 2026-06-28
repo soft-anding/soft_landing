@@ -350,7 +350,7 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
           {/* Footer: detail page link */}
           <div className="flex items-center pt-sm border-t border-outline-variant/20">
             <button
-              onClick={() => navigate(`/item/${item.item_type}/${item.item_id}`)}
+              onClick={() => navigate(`/item/${item.item_type}/${item.item_id}`, { state: { item } })}
               className="font-label-sm text-label-sm text-primary inline-flex items-center gap-xs hover:underline"
             >
               <span className="material-symbols-outlined text-base">arrow_back</span>
