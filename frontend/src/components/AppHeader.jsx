@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { prefetchRights } from "../rightsCache";
 import NotificationsBell from "./NotificationsBell";
 import ProfileDrawer from "./ProfileDrawer";
 
+const TABS = [
+  { path: "/dashboard",  label: "הדשבורד שלי" },
+  { path: "/rights",     label: "זכויות והטבות" },
+  { path: "/documents",  label: "מסמכים וטפסים" },
+];
+
 // Fixed, blurred top nav matching the Stitch dashboard header.
 export default function AppHeader() {
-  const { signOut } = useAuth();
+  const { signOut, userProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen]       = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
@@ -20,6 +28,13 @@ export default function AppHeader() {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [menuOpen]);
+
+  // AppHeader is on every authenticated page, so this is the earliest place
+  // to start loading the rights/benefits page's data — by the time the user
+  // clicks the tab, it's already cached and the page renders instantly.
+  useEffect(() => {
+    prefetchRights(userProfile?.destination_city ?? null);
+  }, [userProfile?.destination_city]);
 
   return (
     <>
@@ -37,6 +52,25 @@ export default function AppHeader() {
           </span>
           <span className="text-headline-md font-headline-md font-bold text-primary">נחיתה רכה</span>
         </button>
+
+        <div className="flex items-center gap-lg">
+          {TABS.map((tab) => {
+            const active = location.pathname === tab.path;
+            return (
+              <button
+                key={tab.path}
+                onClick={() => navigate(tab.path)}
+                className={`px-sm py-xs rounded font-label-md text-label-md transition-colors ${
+                  active
+                    ? "text-primary font-bold"
+                    : "text-on-surface-variant hover:text-primary hover:bg-outline-variant/10"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
         <div className="flex items-center gap-sm">
           <NotificationsBell />
