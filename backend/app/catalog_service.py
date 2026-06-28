@@ -279,7 +279,7 @@ def fetch_user_status_map(user_id: str) -> dict[tuple[str, int], dict]:
     sb = get_supabase()
     rows = (
         sb.table("user_item_status")
-        .select("item_type,item_id,status,notes,next_action,deadline_type,deadline_date")
+        .select("item_type,item_id,status,notes,next_action,deadline_type,deadline_date,updated_at")
         .eq("user_id", user_id)
         .execute()
         .data
@@ -334,6 +334,7 @@ def fetch_items_with_status(
         item = {
             **item,
             "status": st["status"] if st else DEFAULT_STATUS,
+            "status_updated_at": st.get("updated_at") if st else None,
             "notes": st.get("notes") if st else None,
             "next_action": st.get("next_action") if st else None,
             "deadline_type": st_deadline_type or item.get("deadline_type"),

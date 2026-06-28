@@ -3,8 +3,11 @@
 Serves the JSON API under /api and, in production, the built React SPA from
 frontend/dist at the root (so a single Railway service hosts both).
 """
+from contextlib import asynccontextmanager
 from pathlib import Path
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -12,9 +15,25 @@ from fastapi.staticfiles import StaticFiles
 from .auth import CurrentUser, get_current_user
 from .config import settings
 from .constants import STATUSES
-from .routers import catalog, health, task_agent, tracking
+from .notification_service import TZ, generate_daily_notifications
+from .routers import catalog, health, internal, task_agent, tracking
 
-app = FastAPI(title="Soft Landing Moving Assistant API", version="0.1.0")
+scheduler = BackgroundScheduler(timezone=TZ)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    scheduler.add_job(
+        generate_daily_notifications,
+        CronTrigger(hour=8, minute=0, timezone=TZ),
+        id="daily_notifications",
+    )
+    scheduler.start()
+    yield
+    scheduler.shutdown(wait=False)
+
+
+app = FastAPI(title="Soft Landing Moving Assistant API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +48,7 @@ api.include_router(health.router)
 api.include_router(catalog.router)
 api.include_router(tracking.router)
 api.include_router(task_agent.router)
+api.include_router(internal.router)
 
 
 @api.get("/statuses", tags=["meta"])

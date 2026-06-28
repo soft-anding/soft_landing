@@ -1,17 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import NotificationsBell from "./NotificationsBell";
 import ProfileDrawer from "./ProfileDrawer";
-
-function BellIcon({ className }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" className={className}>
-      <rect width="256" height="256" fill="none" />
-      <path d="M96,192a32,32,0,0,0,64,0" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16" />
-      <path d="M56,104a72,72,0,0,1,144,0c0,35.82,8.3,64.6,14.9,76A8,8,0,0,1,208,192H48a8,8,0,0,1-6.88-12C47.71,168.6,56,139.81,56,104Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16" />
-    </svg>
-  );
-}
 
 // Fixed, blurred top nav matching the Stitch dashboard header.
 export default function AppHeader() {
@@ -48,13 +39,7 @@ export default function AppHeader() {
         </button>
 
         <div className="flex items-center gap-sm">
-          <button
-            type="button"
-            aria-label="התראות"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
-          >
-            <BellIcon className="w-6 h-6" />
-          </button>
+          <NotificationsBell />
 
           <div className="relative" ref={menuRef}>
             <button
@@ -72,7 +57,7 @@ export default function AppHeader() {
             </button>
 
             {menuOpen && (
-              <div className="absolute left-0 top-full mt-xs w-40 bg-white rounded-sm soft-shadow border border-outline-variant/30 overflow-hidden text-right">
+              <div className="absolute left-0 top-full mt-xs w-40 bg-white rounded-2xl soft-shadow border border-outline-variant/30 overflow-hidden text-right">
                 <button
                   type="button"
                   onClick={() => { setMenuOpen(false); setProfileOpen(true); }}

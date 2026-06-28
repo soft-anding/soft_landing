@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     open_ai_model: str = "gpt-4o-mini"
     open_ai_model_backup: str = "gpt-4o"
 
+    # Shared secret for the manual /api/internal/notifications/run trigger —
+    # not a user JWT, since the job acts on every user, not one logged-in caller.
+    internal_job_secret: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
