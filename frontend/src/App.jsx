@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import Spinner from "./components/Spinner";
@@ -41,6 +41,12 @@ export default function App() {
   // re-renders of the dashboard itself — only "סיים שיחה" inside the chat
   // resets it. Navigating to any other page unmounts it.
   const showAgent = Boolean(session && userProfile) && AGENT_PATHS.includes(location.pathname);
+
+  // React Router doesn't reset scroll position on navigation by default —
+  // without this, a page mounts wherever the previous page's scroll was left.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <>
