@@ -123,7 +123,7 @@ def _fetch_rights_items(city_slug: str | None = None) -> list[dict]:
     if city_slug:
         city_id = _resolve_city_id(city_slug)
         if city_id is not None:
-            query = query.eq("city_id", city_id)
+            query = query.or_(f"city_id.eq.{city_id},city_id.is.null")
     return query.execute().data or []
 
 
