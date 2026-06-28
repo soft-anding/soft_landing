@@ -5,12 +5,14 @@ import Spinner from "./components/Spinner";
 import TaskAgentChat, { TaskAgentFab } from "./components/TaskAgentChat";
 import CategoryView from "./pages/CategoryView";
 import Dashboard from "./pages/Dashboard";
+import DocumentsForms from "./pages/DocumentsForms";
 import ItemDetail from "./pages/ItemDetail";
 import Login from "./pages/Login";
 import OnboardingLayout from "./pages/OnboardingLayout";
 import OnboardingStep1 from "./pages/OnboardingStep1";
 import OnboardingStep2 from "./pages/OnboardingStep2";
 import OnboardingStep3 from "./pages/OnboardingStep3";
+import RightsBenefits from "./pages/RightsBenefits";
 
 /**
  * Guards /dashboard and its nested routes.
@@ -74,6 +76,8 @@ export default function App() {
       <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
       <Route path="/category/:slug" element={<RequireAuth><CategoryView /></RequireAuth>} />
       <Route path="/item/:itemType/:itemId" element={<RequireAuth><ItemDetail /></RequireAuth>} />
+      <Route path="/rights" element={<RequireAuth><RightsBenefits /></RequireAuth>} />
+      <Route path="/documents" element={<RequireAuth><DocumentsForms /></RequireAuth>} />
 
       {/* Catch-all → landing */}
       <Route path="*" element={<Navigate to="/" replace />} />
