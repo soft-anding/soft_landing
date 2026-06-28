@@ -45,7 +45,7 @@ REQUEST_DELAY_SECONDS = 0.5
 ROWS = [
     {
         "city_id": None,
-        "category": "disability_housing_guide",
+        "category": "rights_general",
         "title_he": "דיור לאנשים עם מוגבלויות",
         "description": (
             "מדריך-מסכם של כל-זכות לכלל הזכויות וההטבות בתחום הדיור לאנשים עם מוגבלויות: "
@@ -70,7 +70,7 @@ ROWS = [
     },
     {
         "city_id": None,
-        "category": "reservist_benefits_guide",
+        "category": "rights_general",
         "title_he": "הטבות לחיילי מילואים",
         "description": (
             "מדריך-מסכם של כל-זכות לכלל ההטבות הניתנות לחיילי מילואים בעלי תעודת משרת מילואים פעיל: "
@@ -93,7 +93,7 @@ ROWS = [
     },
     {
         "city_id": None,
-        "category": "youth_housing_guide",
+        "category": "rights_general",
         "title_he": "דיור זמני וקבוע לצעירים וצעירות",
         "description": (
             "מדריך-מסכם של כל-זכות לזכויות ושירותי דיור המיועדים לצעירים וצעירות: חיילים משוחררים וחיילים "
@@ -116,7 +116,7 @@ ROWS = [
     },
     {
         "city_id": None,
-        "category": "arnona_exemption_soldiers",
+        "category": "arnona_discount",
         "title_he": "פטור מארנונה לחיילים בשירות חובה וחיילים משוחררים",
         "description": (
             "חיילים בשירות חובה פטורים מתשלום ארנונה על 70 מ\"ר משטח הדירה שבה הם מתגוררים (כבעלים או "
@@ -140,7 +140,7 @@ ROWS = [
     },
     {
         "city_id": None,
-        "category": "rent_assistance_exceptions_committee",
+        "category": "rights_general",
         "title_he": "ועדת חריגים לסיוע בשכר דירה",
         "description": (
             "ועדת החריגים של משרד הבינוי והשיכון מוסמכת לדון במתן סיוע בשכר דירה גם למי שאינו עומד בתנאי "
@@ -169,7 +169,7 @@ ROWS = [
     },
     {
         "city_id": None,
-        "category": "arnona_discount_student",
+        "category": "arnona_discount",
         "title_he": "הנחה בארנונה לסטודנט",
         "description": (
             "סטודנט, כולל תלמיד מכינה, עשוי להיות זכאי להנחה בארנונה בהתאם למבחן הכנסות (כמו כל תושב בעל "
@@ -209,7 +209,7 @@ ROWS = [
     },
     {
         "city_id": None,
-        "category": "arnona_discount_civic_service",
+        "category": "arnona_discount",
         "title_he": "פטורים והנחות בארנונה למתנדבי שירות לאומי-אזרחי",
         "description": (
             "מתנדבי השירות הלאומי והשירות הלאומי-אזרחי זכאים לפטורים והנחות בתשלום ארנונה עבור דירה שהם "
@@ -238,7 +238,7 @@ ROWS = [
     },
     {
         "city_id": None,
-        "category": "lone_soldier_housing_assistance",
+        "category": "rights_general",
         "title_he": "סיוע בהוצאות דיור לחיילים בודדים",
         "description": (
             "חיילים בודדים זכאים לקבל מצה\"ל השתתפות בדמי שכירות ובהוצאות שונות עבור אחזקת הדירה, כגון מים, "
@@ -260,7 +260,7 @@ ROWS = [
     },
     {
         "city_id": None,
-        "category": "lone_soldier_electricity_discount",
+        "category": "rights_general",
         "title_he": "הנחה בחשבון חשמל לחיילים בודדים",
         "description": (
             "חיילים בודדים המקבלים השתתפות בשכר דירה זכאים להנחה בתשלום חשבון החשמל, בשיעור 50% עבור 400 "
