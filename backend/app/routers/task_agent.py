@@ -53,6 +53,15 @@ TOOLS = [
                         "type": "string",
                         "description": "תאריך בפורמט YYYY-MM-DD — נדרש רק אם deadline_type הוא specific_date",
                     },
+                    "action_steps": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "2-5 שלבי פעולה קונקרטיים וברורים לביצוע המשימה, בעברית. "
+                            "חובה להציע שלבים אלה ביזמתך בכל משימה חדשה (אלא אם המשימה כל כך "
+                            "פשוטה וחד-שלבית שאין צורך לפרק אותה)."
+                        ),
+                    },
                 },
                 "required": ["title", "deadline_type", "category"],
             },
@@ -74,6 +83,25 @@ TOOLS = [
                     },
                 },
                 "required": ["item_id", "category"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_task_action_steps",
+            "description": "מוסיף או מחליף את שלבי הפעולה של משימה אישית קיימת (custom_task בלבד).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "item_id": {"type": "integer"},
+                    "action_steps": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "2-5 שלבי פעולה קונקרטיים וברורים, בעברית.",
+                    },
+                },
+                "required": ["item_id", "action_steps"],
             },
         },
     },
@@ -154,10 +182,15 @@ def _execute_tool(user_id: str, name: str, args: dict) -> dict:
                 description=args.get("description"),
                 category=args.get("category"),
                 deadline_date=args.get("deadline_date"),
+                action_steps=args.get("action_steps"),
             )
         elif name == "set_task_category":
             item = task_actions.set_task_category(
                 user_id, int(args["item_id"]), args["category"]
+            )
+        elif name == "set_task_action_steps":
+            item = task_actions.set_task_content(
+                user_id, int(args["item_id"]), action_steps=args.get("action_steps")
             )
         elif name == "set_task_status":
             item = task_actions.set_task_status(

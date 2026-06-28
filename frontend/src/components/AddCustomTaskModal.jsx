@@ -35,7 +35,14 @@ const EMPTY = {
   customCategory: "",
   deadline_type: "before_move",
   deadline_date: "2026-01-01",
+  actionSteps: [""],
+  relatedLinks: [""],
 };
+
+function cleanList(list) {
+  const vals = list.map((v) => v.trim()).filter(Boolean);
+  return vals.length ? vals : null;
+}
 
 export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
   const [form,   setForm]   = useState(EMPTY);
@@ -44,6 +51,25 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
 
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function updateListItem(field, index, value) {
+    setForm((prev) => {
+      const list = [...prev[field]];
+      list[index] = value;
+      return { ...prev, [field]: list };
+    });
+  }
+
+  function addListItem(field) {
+    setForm((prev) => ({ ...prev, [field]: [...prev[field], ""] }));
+  }
+
+  function removeListItem(field, index) {
+    setForm((prev) => {
+      const list = prev[field].filter((_, i) => i !== index);
+      return { ...prev, [field]: list.length ? list : [""] };
+    });
   }
 
   const isCustomCategory = form.category === "__custom__";
@@ -67,6 +93,8 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
         deadline_type: form.deadline_type,
         deadline_date:
           form.deadline_type === "specific_date" ? form.deadline_date || null : null,
+        action_steps: cleanList(form.actionSteps),
+        related_links: cleanList(form.relatedLinks),
       };
       const created = await api.createCustomTask(payload);
       onTaskCreated(created);
@@ -208,6 +236,84 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
                 placeholder="הוסיפו פרטים, תזכורות, קישורים…"
                 className="w-full px-md py-2 rounded-xl border border-outline-variant font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
               />
+            </div>
+
+            {/* Action steps — stacked, one row per step */}
+            <div>
+              <label className="block font-label-md text-label-md text-on-surface mb-xs">
+                שלבי פעולה (אופציונלי)
+              </label>
+              <div className="space-y-xs">
+                {form.actionSteps.map((step, i) => (
+                  <div key={i} className="flex items-center gap-xs">
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={step}
+                      onChange={(e) => updateListItem("actionSteps", i, e.target.value)}
+                      placeholder="לדוגמה: להתקשר לעירייה"
+                      className="flex-1 px-md py-2 rounded border border-outline-variant font-body-md text-body-md text-on-surface text-right placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    />
+                    {form.actionSteps.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeListItem("actionSteps", i)}
+                        aria-label="הסר שלב"
+                        className="text-on-surface-variant hover:text-error transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-base">close</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => addListItem("actionSteps")}
+                className="mt-xs flex items-center gap-xs font-label-sm text-label-sm text-primary hover:underline"
+              >
+                <span className="material-symbols-outlined text-base">add</span>
+                הוספת שלב
+              </button>
+            </div>
+
+            {/* Related links — stacked, one row per link */}
+            <div>
+              <label className="block font-label-md text-label-md text-on-surface mb-xs">
+                קישורים (אופציונלי)
+              </label>
+              <div className="space-y-xs">
+                {form.relatedLinks.map((link, i) => (
+                  <div key={i} className="flex items-center gap-xs">
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={link}
+                      onChange={(e) => updateListItem("relatedLinks", i, e.target.value)}
+                      placeholder="https://…"
+                      className="flex-1 px-md py-2 rounded border border-outline-variant font-body-md text-body-md text-on-surface text-right placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    />
+                    {form.relatedLinks.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeListItem("relatedLinks", i)}
+                        aria-label="הסר קישור"
+                        className="text-on-surface-variant hover:text-error transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-base">close</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => addListItem("relatedLinks")}
+                className="mt-xs flex items-center gap-xs font-label-sm text-label-sm text-primary hover:underline"
+              >
+                <span className="material-symbols-outlined text-base">add</span>
+                הוספת קישור
+              </button>
             </div>
 
             {error && (

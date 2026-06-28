@@ -1,10 +1,18 @@
 """Per-user tracking endpoints: update an item's status and read progress."""
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
+from .. import task_actions
 from ..auth import CurrentUser, get_current_user
 from ..catalog_service import fetch_items_with_status, fetch_single_item
 from ..constants import DEFAULT_STATUS, DONE_STATUS, STATUSES
-from ..schemas import CustomTaskCreate, DeadlineUpdate, Item, ProgressSummary, StatusUpdate
+from ..schemas import (
+    CustomTaskContentUpdate,
+    CustomTaskCreate,
+    DeadlineUpdate,
+    Item,
+    ProgressSummary,
+    StatusUpdate,
+)
 from ..supabase_client import get_supabase
 
 router = APIRouter(tags=["tracking"])
@@ -167,6 +175,44 @@ def create_custom_task(
     if item is None:
         raise HTTPException(status_code=500, detail="Task created but could not be read back.")
     return Item(**item, status=DEFAULT_STATUS)
+
+
+@router.put("/custom-tasks/{item_id}/content", response_model=Item)
+def update_custom_task_content(
+    payload: CustomTaskContentUpdate,
+    item_id: int = Path(..., ge=1),
+    user: CurrentUser = Depends(get_current_user),
+) -> Item:
+    """Edits a custom task's action_steps/related_links (custom_task only —
+    built-in catalog content isn't user-editable).
+    """
+    try:
+        item = task_actions.set_task_content(
+            user.id, item_id, action_steps=payload.action_steps, related_links=payload.related_links
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    existing = (
+        get_supabase()
+        .table("user_item_status")
+        .select("status,notes,next_action,deadline_type,deadline_date")
+        .eq("user_id", user.id)
+        .eq("item_type", "custom_task")
+        .eq("item_id", item_id)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    current = existing[0] if existing else {}
+    return Item(
+        **item,
+        status=current.get("status", DEFAULT_STATUS),
+        notes=current.get("notes"),
+        next_action=current.get("next_action"),
+        deadline_type=current.get("deadline_type") or item.get("deadline_type"),
+        deadline_date=str(current["deadline_date"]) if current.get("deadline_date") else item.get("deadline_date"),
+    )
 
 
 @router.get("/progress", response_model=ProgressSummary)

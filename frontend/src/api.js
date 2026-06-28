@@ -56,6 +56,9 @@ const realApi = {
   createCustomTask: (payload) =>
     request("/custom-tasks", { method: "POST", body: payload }),
 
+  setCustomTaskContent: (itemId, payload) =>
+    request(`/custom-tasks/${itemId}/content`, { method: "PUT", body: payload }),
+
   setDeadline: (itemType, itemId, payload) =>
     request(`/items/${itemType}/${itemId}/deadline`, { method: "PUT", body: payload }),
 

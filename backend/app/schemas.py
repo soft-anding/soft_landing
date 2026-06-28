@@ -58,6 +58,11 @@ class StatusUpdate(BaseModel):
     next_action: str | None = None
 
 
+class CustomTaskContentUpdate(BaseModel):
+    action_steps: list[Any] | None = None
+    related_links: list[Any] | None = None
+
+
 class DeadlineUpdate(BaseModel):
     deadline_type: Literal["before_move", "move_day", "after_move", "specific_date"] | None = None
     deadline_date: str | None = None  # ISO date string, required when deadline_type='specific_date'

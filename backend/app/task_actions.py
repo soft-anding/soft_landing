@@ -119,6 +119,8 @@ def add_custom_task(
     description: str | None = None,
     category: str | None = None,
     deadline_date: str | None = None,
+    action_steps: list[str] | None = None,
+    related_links: list[dict] | None = None,
 ) -> dict:
     if not title or not title.strip():
         raise ValueError("כותרת המשימה לא יכולה להיות ריקה.")
@@ -135,6 +137,8 @@ def add_custom_task(
             "category": category,
             "deadline_type": deadline_type,
             "deadline_date": deadline_date,
+            "action_steps": action_steps,
+            "related_links": related_links,
         }
     ).execute()
     if not result.data:
@@ -155,4 +159,34 @@ def add_custom_task(
     item = fetch_single_item("custom_task", item_id, user_id=user_id)
     if item is None:
         raise ValueError("המשימה נוצרה אך לא ניתן לקרוא אותה בחזרה.")
+    return item
+
+
+_UNSET = object()
+
+
+def set_task_content(
+    user_id: str,
+    item_id: int,
+    action_steps: list[str] | None = _UNSET,
+    related_links: list[dict] | None = _UNSET,
+) -> dict:
+    """Updates the action_steps/related_links of an existing custom task
+    (custom_task only — built-in catalog content isn't user-editable).
+    Only the fields explicitly passed are overwritten — e.g. the agent's
+    set_task_action_steps tool only passes action_steps, and must not wipe
+    out related_links the user already saved.
+    """
+    update: dict = {}
+    if action_steps is not _UNSET:
+        update["action_steps"] = action_steps
+    if related_links is not _UNSET:
+        update["related_links"] = related_links
+    if update:
+        sb = get_supabase()
+        sb.table("user_custom_tasks").update(update).eq("id", item_id).eq("user_id", user_id).execute()
+
+    item = fetch_single_item("custom_task", item_id, user_id=user_id)
+    if item is None:
+        raise ValueError("המשימה לא נמצאה.")
     return item

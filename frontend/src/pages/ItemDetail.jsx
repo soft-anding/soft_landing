@@ -38,6 +38,30 @@ export default function ItemDetail() {
   const [nextAction, setNextAction] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [actionSteps, setActionSteps] = useState([""]);
+  const [relatedLinks, setRelatedLinks] = useState([""]);
+  const [savingContent, setSavingContent] = useState(false);
+  const [contentSaved, setContentSaved] = useState(false);
+
+  const listFrom = (values) => {
+    const vals = (values || []).map((v) => (typeof v === "string" ? v : v.url || v.text || v.title || ""));
+    return vals.length ? vals : [""];
+  };
+
+  function updateListItem(list, setList, index, value) {
+    const next = [...list];
+    next[index] = value;
+    setList(next);
+  }
+
+  function addListItem(list, setList) {
+    setList([...list, ""]);
+  }
+
+  function removeListItem(list, setList, index) {
+    const next = list.filter((_, i) => i !== index);
+    setList(next.length ? next : [""]);
+  }
 
   useEffect(() => {
     let alive = true;
@@ -55,6 +79,8 @@ export default function ItemDetail() {
         setStatus(found.status);
         setNotes(found.notes || "");
         setNextAction(found.next_action || "");
+        setActionSteps(listFrom(found.action_steps));
+        setRelatedLinks(listFrom(found.links));
       })
       .catch((e) => alive && setError(e.message))
       .finally(() => alive && setLoading(false));
@@ -78,6 +104,28 @@ export default function ItemDetail() {
       setError(e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const cleanList = (list) => {
+    const vals = list.map((v) => v.trim()).filter(Boolean);
+    return vals.length ? vals : null;
+  };
+
+  const saveContent = async () => {
+    setSavingContent(true);
+    setContentSaved(false);
+    try {
+      const updated = await api.setCustomTaskContent(Number(itemId), {
+        action_steps: cleanList(actionSteps),
+        related_links: cleanList(relatedLinks),
+      });
+      setItem(updated);
+      setContentSaved(true);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSavingContent(false);
     }
   };
 
@@ -193,6 +241,87 @@ export default function ItemDetail() {
                 {saving ? "שומר…" : "שמירה"}
               </button>
               {saved && <p className="mt-sm text-primary text-label-md text-center">נשמר ✓</p>}
+
+              {item.is_custom && (
+                <div className="mt-lg pt-md border-t border-outline-variant/20">
+                  <label className="block font-label-md text-on-surface-variant mb-xs">שלבי פעולה</label>
+                  <div className="space-y-xs">
+                    {actionSteps.map((step, i) => (
+                      <div key={i} className="flex items-center gap-xs">
+                        <input
+                          type="text"
+                          dir="rtl"
+                          value={step}
+                          onChange={(e) => updateListItem(actionSteps, setActionSteps, i, e.target.value)}
+                          placeholder="לדוגמה: להתקשר לעירייה"
+                          className="flex-1 rounded border-2 border-surface-variant bg-surface-bright px-3 py-2 input-pill font-body-md text-right"
+                        />
+                        {actionSteps.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeListItem(actionSteps, setActionSteps, i)}
+                            aria-label="הסר שלב"
+                            className="text-on-surface-variant hover:text-error transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-base">close</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addListItem(actionSteps, setActionSteps)}
+                    className="mt-xs flex items-center gap-xs font-label-sm text-label-sm text-primary hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-base">add</span>
+                    הוספת שלב
+                  </button>
+
+                  <label className="block font-label-md text-on-surface-variant mt-md mb-xs">קישורים</label>
+                  <div className="space-y-xs">
+                    {relatedLinks.map((link, i) => (
+                      <div key={i} className="flex items-center gap-xs">
+                        <input
+                          type="text"
+                          dir="rtl"
+                          value={link}
+                          onChange={(e) => updateListItem(relatedLinks, setRelatedLinks, i, e.target.value)}
+                          placeholder="https://…"
+                          className="flex-1 rounded border-2 border-surface-variant bg-surface-bright px-3 py-2 input-pill font-body-md text-right"
+                        />
+                        {relatedLinks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeListItem(relatedLinks, setRelatedLinks, i)}
+                            aria-label="הסר קישור"
+                            className="text-on-surface-variant hover:text-error transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-base">close</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addListItem(relatedLinks, setRelatedLinks)}
+                    className="mt-xs flex items-center gap-xs font-label-sm text-label-sm text-primary hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-base">add</span>
+                    הוספת קישור
+                  </button>
+
+                  <button
+                    onClick={saveContent}
+                    disabled={savingContent}
+                    className="mt-md w-full h-12 bg-primary hover:bg-primary/90 text-on-primary rounded-full font-label-md transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-xs"
+                  >
+                    {savingContent ? "שומר…" : "שמירת שלבים וקישורים"}
+                  </button>
+                  {contentSaved && <p className="mt-sm text-primary text-label-md text-center">נשמר ✓</p>}
+                </div>
+              )}
             </aside>
           </div>
         )}
