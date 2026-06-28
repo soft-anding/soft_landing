@@ -105,6 +105,40 @@ const realApi = {
     }
     return full;
   },
+
+  streamDocumentsAgentChat: async (messages, category, forms, onChunk) => {
+    const headers = { ...(await authHeader()), "Content-Type": "application/json" };
+    const res = await fetch(`${API_BASE}/api/documents-agent/chat`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ messages, category, forms }),
+    });
+
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const j = await res.json();
+        detail = j.detail || detail;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(`${res.status}: ${detail}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let full = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      if (chunk) {
+        full += chunk;
+        onChunk(chunk, full);
+      }
+    }
+    return full;
+  },
 };
 
 // In demo mode, serve mock data with no backend (see demo.js / demoData.js).

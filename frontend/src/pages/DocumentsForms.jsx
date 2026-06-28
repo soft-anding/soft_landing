@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AppHeader from "../components/AppHeader";
+import DocumentsAgentChat from "../components/DocumentsAgentChat";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
@@ -73,9 +74,8 @@ function FormRow({ form, onToggle, saving }) {
 }
 
 // ── Category accordion row — icon + name + checked/total badge on the
-// right, "שאלו את הצ'אט" placeholder + chevron on the left. Clicking the
-// row toggles its form list; the chat button is a no-op for now.
-function CategorySection({ category, items, expanded, onToggleExpand, onToggleForm, saving }) {
+// right, "שאלו את הצ'אט" button + chevron on the left.
+function CategorySection({ category, items, expanded, onToggleExpand, onToggleForm, saving, onOpenChat }) {
   const icon = categoryIcon(category);
   const checkedCount = items.filter((f) => f.checked).length;
 
@@ -98,7 +98,7 @@ function CategorySection({ category, items, expanded, onToggleExpand, onToggleFo
         <div className="flex items-center gap-sm">
           <button
             type="button"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onOpenChat(category, items); }}
             className="flex items-center gap-xs px-md py-xs rounded-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-outline-variant/10 transition-colors"
           >
             <span className="material-symbols-outlined text-base">chat</span>
@@ -134,6 +134,16 @@ export default function DocumentsForms() {
   const [saving,  setSaving]  = useState(false);
 
   const [expandedSections, setExpandedSections] = useState({});
+
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatCategory, setChatCategory] = useState(null);
+  const [chatForms, setChatForms] = useState([]);
+
+  function handleOpenChat(category, items) {
+    setChatCategory(category);
+    setChatForms(items);
+    setChatOpen(true);
+  }
 
   useEffect(() => {
     let alive = true;
@@ -189,6 +199,12 @@ export default function DocumentsForms() {
   return (
     <div className="min-h-screen">
       <AppHeader />
+      <DocumentsAgentChat
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        category={chatCategory}
+        forms={chatForms}
+      />
       <main className="pt-32 pb-xl px-gutter max-w-container-max mx-auto">
 
         <section className="mb-lg text-right">
@@ -227,6 +243,7 @@ export default function DocumentsForms() {
                     onToggleExpand={() => setExpandedSections((prev) => ({ ...prev, [category]: !prev[category] }))}
                     onToggleForm={handleToggle}
                     saving={saving}
+                    onOpenChat={handleOpenChat}
                   />
                 ))}
               </div>

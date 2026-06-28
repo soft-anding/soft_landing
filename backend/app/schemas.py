@@ -97,3 +97,9 @@ class TaskAgentMessage(BaseModel):
 
 class TaskAgentChatRequest(BaseModel):
     messages: list[TaskAgentMessage]
+
+
+class DocumentsAgentChatRequest(BaseModel):
+    messages: list[TaskAgentMessage]
+    category: str | None = None
+    forms: list[str] = []

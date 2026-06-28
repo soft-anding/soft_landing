@@ -20,6 +20,8 @@ class Settings(BaseSettings):
 
     # Tasks AI agent (OpenAI) — powers the in-app "סוכן AI למשימות" chat
     tasks_agent_openai_api_key: str = ""
+    # Documents AI agent (OpenAI) — powers the documents/forms chat
+    documents_agent_openai_api_key: str = ""
     open_ai_model: str = "gpt-4o-mini"
     open_ai_model_backup: str = "gpt-4o"
 

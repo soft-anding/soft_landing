@@ -16,7 +16,7 @@ from .auth import CurrentUser, get_current_user
 from .config import settings
 from .constants import STATUSES
 from .notification_service import TZ, generate_daily_notifications
-from .routers import catalog, health, internal, task_agent, tracking
+from .routers import catalog, documents_agent, health, internal, task_agent, tracking
 
 scheduler = BackgroundScheduler(timezone=TZ)
 
@@ -48,6 +48,7 @@ api.include_router(health.router)
 api.include_router(catalog.router)
 api.include_router(tracking.router)
 api.include_router(task_agent.router)
+api.include_router(documents_agent.router)
 api.include_router(internal.router)
 
 
