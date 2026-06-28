@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import Spinner from "./components/Spinner";
 import TaskAgentChat, { TaskAgentFab } from "./components/TaskAgentChat";
@@ -28,14 +28,20 @@ function RequireAuth({ children }) {
   return children;
 }
 
+// Agent is only relevant on the dashboard and rights/benefits pages — not on
+// category/item detail pages, documents, onboarding, etc.
+const AGENT_PATHS = ["/dashboard", "/rights"];
+
 export default function App() {
   const { session, userProfile, loading } = useAuth();
+  const location = useLocation();
   const [agentOpen, setAgentOpen] = useState(false);
 
-  // Lives above <Routes> (not inside Dashboard) so navigating to a category
-  // or item-detail page and back doesn't unmount it and lose the conversation —
-  // only "סיים שיחה" inside the chat itself should reset it.
-  const showAgent = Boolean(session && userProfile);
+  // Lives above <Routes> (not inside Dashboard/RightsBenefits) so switching
+  // between those two pages doesn't unmount it and lose the conversation —
+  // only "סיים שיחה" inside the chat itself should reset it. Navigating to
+  // any other page (category/item detail, documents, ...) does unmount it.
+  const showAgent = Boolean(session && userProfile) && AGENT_PATHS.includes(location.pathname);
 
   return (
     <>
