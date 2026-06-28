@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { prefetchForms } from "../formsCache";
 import { prefetchRights } from "../rightsCache";
 import NotificationsBell from "./NotificationsBell";
 import ProfileDrawer from "./ProfileDrawer";
@@ -34,6 +35,7 @@ export default function AppHeader() {
   // clicks the tab, it's already cached and the page renders instantly.
   useEffect(() => {
     prefetchRights(userProfile?.destination_city ?? null);
+    prefetchForms(userProfile?.destination_city ?? null);
   }, [userProfile?.destination_city]);
 
   return (

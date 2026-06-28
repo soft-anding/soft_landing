@@ -3,33 +3,36 @@ import AppHeader from "../components/AppHeader";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
+import { formsCacheKey, readFormsCache, writeFormsCache } from "../formsCache";
 
 const CITY_LABELS = { jerusalem: "ירושלים", tel_aviv: "תל אביב" };
 
-// Icon + color per category — frontend-only, mirrors the approach used on
-// the Rights & Benefits page. Categories themselves come straight from the
-// forms table's real data, not from any reference image.
-const CATEGORY_META = {
-  "ארנונה":          { icon: "receipt_long",   bg: "bg-amber-100",  text: "text-amber-700" },
-  "רשויות מקומיות":  { icon: "account_balance", bg: "bg-purple-100", text: "text-purple-700" },
-  "תשתיות":          { icon: "bolt",            bg: "bg-cyan-100",   text: "text-cyan-700" },
-  "חוזים":           { icon: "description",     bg: "bg-rose-100",   text: "text-rose-700" },
-  other:             { icon: "folder",           bg: "bg-gray-100",   text: "text-gray-600" },
+// Icon per category — frontend-only. Categories themselves come straight
+// from the forms table's real data, not from any reference image. All
+// icons share one color (the site's primary green, same as the header
+// title) instead of a different hue per category.
+const CATEGORY_ICON = {
+  "ארנונה":          "receipt_long",
+  "רשויות מקומיות":  "account_balance",
+  "תשתיות":          "bolt",
+  "חוזים":           "description",
+  other:             "folder",
 };
 
-function categoryMeta(category) {
-  return CATEGORY_META[category] || CATEGORY_META.other;
+function categoryIcon(category) {
+  return CATEGORY_ICON[category] || CATEGORY_ICON.other;
 }
 
-const checkCls = "text-primary border-outline-variant focus:ring-primary focus:ring-2 rounded-sm h-5 w-5 shrink-0 accent-primary cursor-pointer";
+const checkCls = "text-primary border-outline-variant focus:ring-primary focus:ring-2 rounded-sm h-4 w-4 shrink-0 accent-primary cursor-pointer";
 
-// ── Form card — checkbox on the right (first in DOM, lands at the RTL
-// start/right), name in the middle, download/external link on the left.
-function FormCard({ form, onToggle, saving }) {
+// ── Form row — checkbox on the right (first in DOM, lands at the RTL
+// start/right), name + notes in the middle, download/external link on the left.
+// min-h keeps every row the same height whether or not it has a notes line.
+function FormRow({ form, onToggle, saving }) {
   const hasFile = Boolean(form.file_url);
 
   return (
-    <div className="bg-white rounded-2xl border border-outline-variant/30 soft-shadow flex items-center gap-sm p-md min-h-20">
+    <div className="flex items-center gap-sm px-md py-sm min-h-16">
       <input
         type="checkbox"
         className={checkCls}
@@ -38,12 +41,12 @@ function FormCard({ form, onToggle, saving }) {
         onChange={() => onToggle(form)}
       />
 
-      <div className="flex flex-col gap-xs flex-1 min-w-0 text-right">
-        <h4 className={`font-headline-sm text-headline-sm text-on-surface ${form.checked ? "line-through opacity-50" : ""}`}>
+      <div className="flex flex-col gap-xs flex-1 min-w-0 text-right justify-center">
+        <h4 className={`font-body-md text-body-md font-semibold text-on-surface ${form.checked ? "line-through opacity-50" : ""}`}>
           {form.name || "ללא שם"}
         </h4>
         {form.notes && (
-          <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+          <p className="font-label-sm text-label-sm text-on-surface-variant">
             {form.notes}
           </p>
         )}
@@ -69,26 +72,87 @@ function FormCard({ form, onToggle, saving }) {
   );
 }
 
+// ── Category accordion row — icon + name + checked/total badge on the
+// right, "שאלו את הצ'אט" placeholder + chevron on the left. Clicking the
+// row toggles its form list; the chat button is a no-op for now.
+function CategorySection({ category, items, expanded, onToggleExpand, onToggleForm, saving }) {
+  const icon = categoryIcon(category);
+  const checkedCount = items.filter((f) => f.checked).length;
+
+  return (
+    <div className="bg-white rounded-2xl border border-outline-variant/30 soft-shadow overflow-hidden">
+      <div
+        onClick={onToggleExpand}
+        className="flex items-center justify-between px-md py-4 cursor-pointer hover:bg-surface-container-low transition-colors"
+      >
+        <div className="flex items-center gap-sm">
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-primary-container/30 text-primary">
+            <span className="material-symbols-outlined text-xl">{icon}</span>
+          </span>
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">{category}</h2>
+          <span className="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-low rounded-full px-sm py-xs">
+            {checkedCount}/{items.length}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-sm">
+          <button
+            type="button"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-xs px-md py-xs rounded-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-outline-variant/10 transition-colors"
+          >
+            <span className="material-symbols-outlined text-base">chat</span>
+            שאלו את הצ'אט
+          </button>
+          <span className="material-symbols-outlined text-on-surface-variant">
+            {expanded ? "expand_less" : "expand_more"}
+          </span>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="divide-y divide-outline-variant/10 border-t border-outline-variant/10">
+          {items.map((form) => (
+            <FormRow key={form.id} form={form} onToggle={onToggleForm} saving={saving} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DocumentsForms() {
   const { userProfile } = useAuth();
   const destinationCity = userProfile?.destination_city ?? null;
 
-  const [forms,   setForms]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = formsCacheKey(destinationCity);
+  const cached   = readFormsCache(cacheKey);
+
+  const [forms,   setForms]   = useState(cached?.forms ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error,   setError]   = useState(null);
   const [saving,  setSaving]  = useState(false);
 
-  const [search, setSearch]                       = useState("");
-  const [activeCategory, setActiveCategory]       = useState("all");
-  const [expandedSections, setExpandedSections]   = useState({});
+  const [expandedSections, setExpandedSections] = useState({});
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    api.forms(destinationCity)
-      .then((data) => { if (alive) setForms(data); })
-      .catch((e) => alive && setError(e.message))
-      .finally(() => alive && setLoading(false));
+    function load(showSpinner) {
+      if (showSpinner) setLoading(true);
+      api.forms(destinationCity)
+        .then((data) => {
+          if (!alive) return;
+          setForms(data);
+          writeFormsCache(cacheKey, { forms: data });
+        })
+        .catch((e) => alive && setError(e.message))
+        .finally(() => alive && showSpinner && setLoading(false));
+    }
+    // AppHeader already prefetches this in the background from every
+    // authenticated page, so cacheKey is usually warm by the time this
+    // page mounts — this still refetches fresh data every mount, just
+    // silently when there's something cached to show meanwhile.
+    load(!readFormsCache(cacheKey));
     return () => { alive = false; };
   }, [destinationCity]);
 
@@ -108,8 +172,6 @@ export default function DocumentsForms() {
 
   const cityLabel = CITY_LABELS[destinationCity] || null;
 
-  // Category chips are derived from the full (city-filtered) dataset, not
-  // from the search-filtered results, so the chip row stays stable while typing.
   const categoryCounts = new Map();
   for (const form of forms) {
     const cat = form.category || "other";
@@ -119,21 +181,10 @@ export default function DocumentsForms() {
     .sort((a, b) => b[1] - a[1])
     .map(([category]) => category);
 
-  const categoryPillFiltered = activeCategory === "all"
-    ? forms
-    : forms.filter((f) => (f.category || "other") === activeCategory);
-
-  const searchNeedle = search.trim().toLowerCase();
-  const visibleForms = searchNeedle
-    ? categoryPillFiltered.filter((f) => (f.name || "").toLowerCase().includes(searchNeedle))
-    : categoryPillFiltered;
-
-  const sections = categoryList
-    .map((category) => ({
-      category,
-      items: visibleForms.filter((f) => (f.category || "other") === category),
-    }))
-    .filter((section) => section.items.length > 0);
+  const sections = categoryList.map((category) => ({
+    category,
+    items: forms.filter((f) => (f.category || "other") === category),
+  }));
 
   return (
     <div className="min-h-screen">
@@ -146,7 +197,7 @@ export default function DocumentsForms() {
             מסמכים וטפסים
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
-            המסמכים והטפסים הרלוונטיים למעבר שלך — סמנו וי כשמסמך טופל
+            המסמכים והטפסים הרלוונטיים למעבר שלך - סמנו וי כשמסמך טופל
           </p>
         </section>
 
@@ -160,100 +211,25 @@ export default function DocumentsForms() {
         {!loading && !error && (
           forms.length ? (
             <div>
-              {/* Search bar */}
-              <div className="relative mb-sm">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="חיפוש מסמך או טופס..."
-                  className="w-full rounded-full border border-outline-variant bg-white pr-12 pl-md py-3 font-body-md text-body-md text-on-surface text-right focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                />
-                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                  search
-                </span>
-              </div>
-
               {cityLabel && (
                 <p className="font-label-md text-label-md text-on-surface-variant mb-md text-right">
                   מוצגים מסמכים רלוונטיים ל{cityLabel}
                 </p>
               )}
 
-              {/* Category filter chips */}
-              <div className="flex gap-sm overflow-x-auto pb-sm mb-md -mx-1 px-1">
-                <button
-                  onClick={() => setActiveCategory("all")}
-                  className={`shrink-0 flex items-center gap-xs px-lg py-sm rounded-full font-label-md text-label-md whitespace-nowrap transition-colors ${
-                    activeCategory === "all"
-                      ? "bg-primary text-on-primary"
-                      : "border border-outline-variant text-on-surface-variant hover:bg-outline-variant/10"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-base">apps</span>
-                  הכל
-                </button>
-                {categoryList.map((category) => {
-                  const meta = categoryMeta(category);
-                  const active = activeCategory === category;
-                  return (
-                    <button
-                      key={category}
-                      onClick={() => setActiveCategory(category)}
-                      className={`shrink-0 flex items-center gap-xs px-lg py-sm rounded-full font-label-md text-label-md whitespace-nowrap transition-colors ${
-                        active
-                          ? "bg-primary text-on-primary"
-                          : "border border-outline-variant text-on-surface-variant hover:bg-outline-variant/10"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-base">{meta.icon}</span>
-                      {category}
-                    </button>
-                  );
-                })}
+              <div className="space-y-sm">
+                {sections.map(({ category, items }) => (
+                  <CategorySection
+                    key={category}
+                    category={category}
+                    items={items}
+                    expanded={!!expandedSections[category]}
+                    onToggleExpand={() => setExpandedSections((prev) => ({ ...prev, [category]: !prev[category] }))}
+                    onToggleForm={handleToggle}
+                    saving={saving}
+                  />
+                ))}
               </div>
-
-              {sections.length ? (
-                <div className="space-y-md">
-                  {sections.map(({ category, items: sectionItems }) => {
-                    const meta = categoryMeta(category);
-                    const isExpanded = expandedSections[category] || sectionItems.length <= 3;
-                    const visibleSectionItems = isExpanded ? sectionItems : sectionItems.slice(0, 3);
-                    return (
-                      <section key={category}>
-                        <div className="flex items-center justify-start gap-sm mb-sm">
-                          <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${meta.bg} ${meta.text}`}>
-                            <span className="material-symbols-outlined text-2xl">{meta.icon}</span>
-                          </span>
-                          <h2 className="font-headline-sm text-headline-sm text-on-surface">{category}</h2>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start">
-                          {visibleSectionItems.map((form) => (
-                            <FormCard key={form.id} form={form} onToggle={handleToggle} saving={saving} />
-                          ))}
-                        </div>
-                        {sectionItems.length > 3 && (
-                          <div className="flex justify-center mt-sm">
-                            <button
-                              onClick={() => setExpandedSections((prev) => ({ ...prev, [category]: !prev[category] }))}
-                              className="flex items-center gap-xs font-label-md text-label-md text-primary hover:underline"
-                            >
-                              {isExpanded ? "הסתר" : "הצג עוד"}
-                              <span className="material-symbols-outlined text-base">
-                                {isExpanded ? "expand_less" : "expand_more"}
-                              </span>
-                            </button>
-                          </div>
-                        )}
-                      </section>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="font-body-md text-body-md text-on-surface-variant text-right py-lg">
-                  לא נמצאו תוצאות תואמות לחיפוש או לקטגוריה שנבחרה.
-                </p>
-              )}
             </div>
           ) : (
             <p className="font-body-md text-body-md text-on-surface-variant text-right">
