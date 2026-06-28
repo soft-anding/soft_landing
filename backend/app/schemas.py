@@ -48,6 +48,8 @@ class CustomTaskCreate(BaseModel):
     category: str | None = None
     deadline_type: Literal["before_move", "move_day", "after_move", "specific_date"]
     deadline_date: str | None = None  # ISO date string, required when deadline_type='specific_date'
+    action_steps: list[Any] | None = None
+    related_links: list[Any] | None = None
 
 
 class StatusUpdate(BaseModel):

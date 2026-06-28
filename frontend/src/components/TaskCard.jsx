@@ -347,18 +347,16 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
             </div>
           )}
 
-          {/* Footer: detail page link — hidden for custom tasks (no detail page) */}
-          {!item.is_custom && (
-            <div className="flex items-center pt-sm border-t border-outline-variant/20">
-              <button
-                onClick={() => navigate(`/item/${item.item_type}/${item.item_id}`)}
-                className="font-label-sm text-label-sm text-primary inline-flex items-center gap-xs hover:underline"
-              >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                עמוד מלא
-              </button>
-            </div>
-          )}
+          {/* Footer: detail page link */}
+          <div className="flex items-center pt-sm border-t border-outline-variant/20">
+            <button
+              onClick={() => navigate(`/item/${item.item_type}/${item.item_id}`)}
+              className="font-label-sm text-label-sm text-primary inline-flex items-center gap-xs hover:underline"
+            >
+              <span className="material-symbols-outlined text-base">arrow_back</span>
+              עמוד מלא
+            </button>
+          </div>
         </div>
       </SideDrawer>
     </div>

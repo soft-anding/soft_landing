@@ -144,6 +144,8 @@ def create_custom_task(
         "category": payload.category,
         "deadline_type": payload.deadline_type,
         "deadline_date": payload.deadline_date,
+        "action_steps": payload.action_steps,
+        "related_links": payload.related_links,
     }).execute()
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create custom task.")

@@ -51,8 +51,8 @@ def _normalize_custom_task(row: dict) -> dict:
         "category": row.get("category"),
         "category_label": category_label(row.get("category")),
         "source_url": None,
-        "links": [],
-        "action_steps": [],
+        "links": row.get("related_links") or [],
+        "action_steps": row.get("action_steps") or [],
         "eligibility_conditions": [],
         "required_documents": [],
         "discount_amount": None,
@@ -213,7 +213,10 @@ def fetch_user_custom_tasks(user_id: str) -> list[dict]:
     sb = get_supabase()
     rows = (
         sb.table("user_custom_tasks")
-        .select("id,user_id,title,description,category,deadline_type,deadline_date,created_at")
+        .select(
+            "id,user_id,title,description,category,deadline_type,deadline_date,"
+            "created_at,action_steps,related_links"
+        )
         .eq("user_id", user_id)
         .execute()
         .data
@@ -261,7 +264,10 @@ def fetch_single_item(item_type: str, item_id: int, user_id: str | None = None) 
     if item_type == "custom_task" and user_id:
         rows = (
             sb.table("user_custom_tasks")
-            .select("id,user_id,title,description,category,deadline_type,deadline_date,created_at")
+            .select(
+            "id,user_id,title,description,category,deadline_type,deadline_date,"
+            "created_at,action_steps,related_links"
+        )
             .eq("id", item_id)
             .eq("user_id", user_id)
             .limit(1)
