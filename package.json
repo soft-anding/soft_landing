@@ -10,7 +10,7 @@
     "embed:data": "tsx scripts/embed-rights-data.ts",
     "find:placeholders": "tsx scripts/find-placeholder-tasks.ts",
     "dev": "concurrently -n backend,frontend -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\"",
-    "dev:backend": "cd backend && .venv\\Scripts\\python.exe -u -m uvicorn app.main:app --reload --reload-dir app --reload-dir prompts --port 8000",
+    "dev:backend": "cd backend && .venv\\Scripts\\python.exe -u -m uvicorn app.main:app --reload --reload-dir app --reload-dir prompts --reload-include \"*.txt\" --port 8000",
     "dev:frontend": "npm run dev --prefix frontend"
   },
   "dependencies": {

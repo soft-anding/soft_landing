@@ -6,7 +6,6 @@ task's status, or change a task's deadline (see task_actions.py).
 """
 import json
 from datetime import date
-from functools import lru_cache
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,6 +18,7 @@ from ..catalog_service import fetch_items_with_status_and_profile
 from ..config import settings
 from ..constants import CUSTOM_TASK_CATEGORIES, STATUSES
 from ..schemas import TaskAgentChatRequest
+from .daily_board import list_daily_board
 
 router = APIRouter(prefix="/task-agent", tags=["task-agent"])
 
@@ -127,6 +127,17 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "get_daily_board",
+            "description": (
+                "שולף את רשימת המשימות שמופיעות כרגע בלוח היומי של המשתמש/ת "
+                "(המשימות שסומנו על ידה/ו ל'היום'), בסדר התצוגה שלהן בלוח."
+            ),
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "set_task_deadline",
             "description": "קובע או משנה את מועד הביצוע (דדליין) של משימה קיימת.",
             "parameters": {
@@ -147,7 +158,6 @@ TOOLS = [
 ]
 
 
-@lru_cache(maxsize=1)
 def _load_system_prompt() -> str:
     try:
         return _PROMPT_PATH.read_text(encoding="utf-8").strip()
@@ -178,8 +188,16 @@ def _profile_context(profile: dict) -> str:
     return ", ".join(parts) if parts else "אין פרטי פרופיל."
 
 
-def _execute_tool(user_id: str, name: str, args: dict) -> dict:
+def _execute_tool(user_id: str, name: str, args: dict, items: list[dict]) -> dict:
     try:
+        if name == "get_daily_board":
+            by_key = {(it["item_type"], it["item_id"]): it for it in items}
+            board = [
+                by_key[(row["item_type"], row["item_id"])]
+                for row in list_daily_board(user_id)
+                if (row["item_type"], row["item_id"]) in by_key
+            ]
+            return {"ok": True, "daily_board": board}
         if name == "add_custom_task":
             item = task_actions.add_custom_task(
                 user_id,
@@ -233,7 +251,7 @@ def _create_stream(client: OpenAI, messages: list[dict], tools: list[dict] | Non
         return client.chat.completions.create(**kwargs)
 
 
-def _stream_reply(client: OpenAI, messages: list[dict], user_id: str):
+def _stream_reply(client: OpenAI, messages: list[dict], user_id: str, items: list[dict]):
     """Yields the assistant's reply text as it's generated. Tool-call rounds
     produce no visible content (the model doesn't speak while deciding to
     call a tool), so only the round that actually answers in words streams
@@ -278,7 +296,7 @@ def _stream_reply(client: OpenAI, messages: list[dict], user_id: str):
             )
             for tc in ordered_calls:
                 args = json.loads(tc["arguments"] or "{}")
-                result = _execute_tool(user_id, tc["name"], args)
+                result = _execute_tool(user_id, tc["name"], args, items)
                 messages.append(
                     {
                         "role": "tool",
@@ -326,5 +344,5 @@ def chat(
 
     client = OpenAI(api_key=settings.tasks_agent_openai_api_key)
     return StreamingResponse(
-        _stream_reply(client, messages, user.id), media_type="text/plain; charset=utf-8"
+        _stream_reply(client, messages, user.id, items), media_type="text/plain; charset=utf-8"
     )

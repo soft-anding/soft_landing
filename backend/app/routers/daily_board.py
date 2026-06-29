@@ -9,19 +9,23 @@ from ..supabase_client import get_supabase
 router = APIRouter(prefix="/daily-board", tags=["daily-board"])
 
 
-@router.get("", response_model=list[DailyBoardKey])
-def get_daily_board(user: CurrentUser = Depends(get_current_user)) -> list[DailyBoardKey]:
+def list_daily_board(user_id: str) -> list[dict]:
+    """Shared by the route below and the task agent's get_daily_board tool."""
     sb = get_supabase()
-    rows = (
+    return (
         sb.table("user_daily_board")
         .select("item_type,item_id,position,added_at")
-        .eq("user_id", user.id)
+        .eq("user_id", user_id)
         .order("position")
         .execute()
         .data
         or []
     )
-    return [DailyBoardKey(**r) for r in rows]
+
+
+@router.get("", response_model=list[DailyBoardKey])
+def get_daily_board(user: CurrentUser = Depends(get_current_user)) -> list[DailyBoardKey]:
+    return [DailyBoardKey(**r) for r in list_daily_board(user.id)]
 
 
 @router.post("/items", response_model=list[DailyBoardKey])
