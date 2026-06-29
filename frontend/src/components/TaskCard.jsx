@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { STATUSES, STATUS_ICON, statusStyle } from "../statusConfig";
-import ShrinkToFitTitle from "./ShrinkToFitTitle";
 import SideDrawer from "./SideDrawer";
 
 // ── Inline status picker — click the badge to open a dropdown menu ────────────
@@ -239,63 +238,48 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
 
   return (
     <div
-      className={`bg-white rounded-2xl border soft-shadow flex flex-col min-h-32 transition-all duration-200 ${
+      className={`bg-white rounded-2xl border soft-shadow flex flex-col h-full transition-all duration-200 ${
         done ? "border-primary/40" : "border-outline-variant/30"
       }`}
     >
-      {/* ── Header (always visible) ───────────────────────────────────── */}
-      <div className="p-md flex justify-between items-start gap-md">
-
-        {/* Title + category label */}
+      {/* ── Header: title + pin button ───────────────────────────────── */}
+      <div className="p-md flex items-start justify-between gap-sm">
         <div className="flex flex-col gap-xs flex-1 text-right min-w-0">
           {item.category_label && (
-            <span className="font-label-sm text-label-sm text-on-surface-variant truncate">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">
               {item.category_label}
             </span>
           )}
-          <ShrinkToFitTitle
-            text={item.title_he || "ללא כותרת"}
-            className={`font-headline-sm text-on-surface ${done ? "line-through opacity-50" : ""}`}
-          />
+          <h3 className={`font-headline-sm text-on-surface text-right leading-snug ${done ? "line-through opacity-50" : ""}`}>
+            {item.title_he || "ללא כותרת"}
+          </h3>
         </div>
 
-        <div className="flex items-center gap-xs shrink-0">
-          {/* Pin to daily board */}
-          {onPin && (
-            <button
-              onClick={() =>
-                isPinned
-                  ? onUnpin(`${item.item_type}:${item.item_id}`)
-                  : onPin(item)
-              }
-              className={`transition-all duration-150 rounded-full p-xs border ${
-                isPinned
-                  ? "border-primary/40 text-primary bg-primary-container/20 hover:bg-error-container/30 hover:text-error hover:border-error/30"
-                  : "border-outline-variant/40 text-on-surface-variant/50 hover:border-primary/50 hover:text-primary hover:bg-primary-container/10"
-              }`}
-              title={isPinned ? "הסר מלוח יומי" : "הוסף ללוח יומי"}
+        {onPin && (
+          <button
+            onClick={() => isPinned ? onUnpin(`${item.item_type}:${item.item_id}`) : onPin(item)}
+            className={`shrink-0 mt-xs w-6 h-6 flex items-center justify-center rounded-full border transition-all duration-150 ${
+              isPinned
+                ? "border-primary/40 text-primary bg-primary-container/20 hover:bg-error-container/30 hover:text-error hover:border-error/30"
+                : "border-outline-variant/50 text-on-surface-variant/60 hover:border-primary/60 hover:text-primary hover:bg-primary-container/10"
+            }`}
+            title={isPinned ? "הסר מלוח יומי" : "הוסף ללוח יומי"}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: "0.9rem", lineHeight: 1, fontVariationSettings: isPinned ? "'FILL' 1" : "'FILL' 0" }}
             >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "1rem", lineHeight: 1, fontVariationSettings: isPinned ? "'FILL' 1" : "'FILL' 0" }}
-              >
-                {isPinned ? "check_circle" : "add_circle"}
-              </span>
-            </button>
-          )}
-
-          {/* Status picker — click to open dropdown and change status inline */}
-          <StatusPicker item={item} onStatusChange={onStatusChange} saving={saving} />
-        </div>
+              {isPinned ? "check" : "add"}
+            </span>
+          </button>
+        )}
       </div>
 
-      {/* ── Card footer: deadline (left) + details toggle (right) ────── */}
-      <div className="flex items-center justify-between px-md pb-md mt-auto gap-md">
-        <DeadlinePicker
-          item={item}
-          onDeadlineChange={onDeadlineChange}
-          saving={saving}
-        />
+      {/* ── Footer: status · deadline · details ──────────────────────── */}
+      <div className="flex items-center gap-sm px-md pb-md mt-auto flex-wrap">
+        <StatusPicker item={item} onStatusChange={onStatusChange} saving={saving} />
+        <DeadlinePicker item={item} onDeadlineChange={onDeadlineChange} saving={saving} />
+        <div className="flex-1" />
         <button
           onClick={() => setExpanded((e) => !e)}
           className="flex items-center gap-xs font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors shrink-0"

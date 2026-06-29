@@ -308,7 +308,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
             summary={pinnedSummary}
             onCollapse={() => fadeTransition(() => setExpandedCategory(null))}
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start mt-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md mt-lg">
             {catTasks.map((item) => {
               const id = `${item.item_type}:${item.item_id}`;
               return (
