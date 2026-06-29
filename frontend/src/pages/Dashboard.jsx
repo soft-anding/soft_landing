@@ -7,6 +7,7 @@ import Spinner from "../components/Spinner";
 import TaskCard from "../components/TaskCard";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
+import { readDailyBoardCache, writeDailyBoardCache } from "../dailyBoardCache";
 import { STATUSES } from "../statusConfig";
 
 // ── Session cache — so leaving the tab/page and coming back shows the data
@@ -389,14 +390,21 @@ export default function Dashboard() {
 
   // Ordered array of "item_type:item_id" strings — source of truth for the daily board.
   // Order matches the `position` column in user_daily_board (agent-suggested order preserved).
-  const [pinnedKeys, setPinnedKeys] = useState([]);
+  // Seeded from the cache AppHeader prefetches on every authenticated page, so the board
+  // renders immediately instead of flashing empty until the DB round-trip resolves.
+  const [pinnedKeys, setPinnedKeys] = useState(() => readDailyBoardCache() ?? []);
   // Derived Set for O(1) lookup in TaskCard pin-button rendering.
   const pinnedIds = useMemo(() => new Set(pinnedKeys), [pinnedKeys]);
 
-  // Fetch the daily board from the DB on mount.
+  // Refresh the daily board from the DB on mount (still needed even with the
+  // cache seed above, since the cache may be stale or missing on first visit).
   useEffect(() => {
     api.getDailyBoard()
-      .then((rows) => setPinnedKeys(rows.map((r) => `${r.item_type}:${r.item_id}`)))
+      .then((rows) => {
+        const keys = rows.map((r) => `${r.item_type}:${r.item_id}`);
+        setPinnedKeys(keys);
+        writeDailyBoardCache(keys);
+      })
       .catch(() => {});
   }, []);
 
@@ -409,7 +417,9 @@ export default function Dashboard() {
       const rows = await api.addToDailyBoard([
         { item_type: item.item_type, item_id: item.item_id },
       ]);
-      setPinnedKeys(rows.map((r) => `${r.item_type}:${r.item_id}`));
+      const keys = rows.map((r) => `${r.item_type}:${r.item_id}`);
+      setPinnedKeys(keys);
+      writeDailyBoardCache(keys);
     } catch {
       // Roll back optimistic update on failure.
       setPinnedKeys((prev) => prev.filter((k) => k !== key));
@@ -422,6 +432,7 @@ export default function Dashboard() {
     setPinnedKeys((prev) => prev.filter((k) => k !== itemKey));
     try {
       await api.removeFromDailyBoard(itemType, parseInt(itemIdStr, 10));
+      writeDailyBoardCache(pinnedKeys.filter((k) => k !== itemKey));
     } catch {
       // Roll back on failure.
       setPinnedKeys((prev) => [...prev, itemKey]);
@@ -447,7 +458,9 @@ export default function Dashboard() {
       }
       try {
         const rows = await api.addToDailyBoard(suggested);
-        setPinnedKeys(rows.map((r) => `${r.item_type}:${r.item_id}`));
+        const keys = rows.map((r) => `${r.item_type}:${r.item_id}`);
+        setPinnedKeys(keys);
+        writeDailyBoardCache(keys);
       } catch {
         setPinnedKeys((prev) => prev.filter((k) => !newKeys.includes(k)));
       }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { prefetchDailyBoard } from "../dailyBoardCache";
 import { prefetchForms } from "../formsCache";
 import { prefetchRights } from "../rightsCache";
 import NotificationsBell from "./NotificationsBell";
@@ -37,6 +38,12 @@ export default function AppHeader() {
     prefetchRights(userProfile?.destination_city ?? null);
     prefetchForms(userProfile?.destination_city ?? null);
   }, [userProfile?.destination_city]);
+
+  // Same idea, but the daily board doesn't depend on the profile — fetch it
+  // once per mount so it's already cached by the time Dashboard reads it.
+  useEffect(() => {
+    prefetchDailyBoard();
+  }, []);
 
   return (
     <>
