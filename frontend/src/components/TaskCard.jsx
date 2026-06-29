@@ -231,7 +231,7 @@ function DeadlinePicker({ item, onDeadlineChange, saving }) {
   );
 }
 
-export default function TaskCard({ item, onStatusChange, onDeadlineChange, saving }) {
+export default function TaskCard({ item, onStatusChange, onDeadlineChange, saving, isPinned, onPin, onUnpin }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
 
@@ -259,8 +259,34 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
           />
         </div>
 
-        {/* Status picker — click to open dropdown and change status inline */}
-        <StatusPicker item={item} onStatusChange={onStatusChange} saving={saving} />
+        <div className="flex items-center gap-xs shrink-0">
+          {/* Pin to daily board */}
+          {onPin && (
+            <button
+              onClick={() =>
+                isPinned
+                  ? onUnpin(`${item.item_type}:${item.item_id}`)
+                  : onPin(item)
+              }
+              className={`transition-all duration-150 rounded-full p-xs border ${
+                isPinned
+                  ? "border-primary/40 text-primary bg-primary-container/20 hover:bg-error-container/30 hover:text-error hover:border-error/30"
+                  : "border-outline-variant/40 text-on-surface-variant/50 hover:border-primary/50 hover:text-primary hover:bg-primary-container/10"
+              }`}
+              title={isPinned ? "הסר מלוח יומי" : "הוסף ללוח יומי"}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: "1rem", lineHeight: 1, fontVariationSettings: isPinned ? "'FILL' 1" : "'FILL' 0" }}
+              >
+                {isPinned ? "check_circle" : "add_circle"}
+              </span>
+            </button>
+          )}
+
+          {/* Status picker — click to open dropdown and change status inline */}
+          <StatusPicker item={item} onStatusChange={onStatusChange} saving={saving} />
+        </div>
       </div>
 
       {/* ── Card footer: deadline (left) + details toggle (right) ────── */}

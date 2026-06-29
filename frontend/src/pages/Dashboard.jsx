@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AppHeader from "../components/AppHeader";
 import AddCustomTaskModal from "../components/AddCustomTaskModal";
+import DailyTasksBoard from "../components/DailyTasksBoard";
 import ProgressTimeline from "../components/ProgressTimeline";
 import Spinner from "../components/Spinner";
 import TaskCard from "../components/TaskCard";
@@ -95,7 +96,7 @@ function DonutChart({ percentage, size = 68 }) {
 // When `compact` is true the box shrinks for the "other categories" row in State 2.
 function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
   const pinned = !!onCollapse;
-  const chartSize = compact ? 56 : pinned ? 112 : 68;
+  const chartSize = compact ? 56 : pinned ? 112 : 52;
   const pct = summary.percentage;
 
   const inner = (
@@ -160,7 +161,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
   return (
     <button
       onClick={onClick}
-      className="group bg-white rounded-2xl border border-outline-variant/30 soft-shadow flex flex-col items-center gap-sm p-md transition-all duration-150 hover:border-primary/50 hover:bg-surface-bright active:scale-[0.97] w-full text-center cursor-pointer"
+      className="group bg-white rounded-2xl border border-outline-variant/30 soft-shadow flex flex-col items-center gap-xs p-sm transition-all duration-150 hover:border-primary/50 hover:bg-surface-bright active:scale-[0.97] w-full text-center cursor-pointer"
     >
       {inner}
     </button>
@@ -195,7 +196,7 @@ function sortByUrgency(tasks) {
 }
 
 // ── Tasks section — State 1 (overview grid) + State 2 (expanded category) ────
-function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAddTask }) {
+function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAddTask, pinnedIds, onPin, onUnpin }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [urgencySort, setUrgencySort] = useState(false);
 
@@ -258,6 +259,9 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
                 saving={savingId === id}
                 onStatusChange={onStatusChange}
                 onDeadlineChange={onDeadlineChange}
+                isPinned={pinnedIds?.has(id)}
+                onPin={onPin}
+                onUnpin={onUnpin}
               />
             );
           })}
@@ -293,6 +297,9 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
                 saving={savingId === id}
                 onStatusChange={onStatusChange}
                 onDeadlineChange={onDeadlineChange}
+                isPinned={pinnedIds?.has(id)}
+                onPin={onPin}
+                onUnpin={onUnpin}
               />
             );
           })}
@@ -354,6 +361,29 @@ export default function Dashboard() {
   const [error,        setError]        = useState(null);
   const [savingId,     setSavingId]     = useState(null);
   const [showAddTask,  setShowAddTask]  = useState(false);
+
+  const DAILY_KEY = `daily_board:${userProfile?.id ?? "guest"}`;
+  const [pinnedIds, setPinnedIds] = useState(
+    () => new Set(JSON.parse(localStorage.getItem(`daily_board:${userProfile?.id ?? "guest"}`) ?? "[]"))
+  );
+
+  function handlePin(item) {
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      next.add(`${item.item_type}:${item.item_id}`);
+      localStorage.setItem(DAILY_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  function handleUnpin(itemKey) {
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(itemKey);
+      localStorage.setItem(DAILY_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   useEffect(() => {
     let alive = true;
@@ -477,33 +507,49 @@ export default function Dashboard() {
         )}
 
         {!loading && !error && (
-          <>
-            <ProgressTimeline
-              moveDate={moveDate}
-              destinationCity={destinationCity}
-              completed={progress?.completed ?? 0}
-              total={progress?.total ?? 0}
-              byStatus={progress?.by_status ?? {}}
-            />
-
-            <section className="mb-xl">
-              <div className="mb-md">
-                <h2 className="font-headline-md text-headline-md text-on-surface">
-                  משימות לקראת המעבר
-                </h2>
-                <span className="font-label-md text-label-md text-on-surface-variant">
-                  {progress ? `${progress.completed} מתוך ${progress.total} משימות הושלמו` : ""}
-                </span>
-              </div>
-              <TasksSection
-                tasks={tasks}
-                onStatusChange={handleStatusChange}
-                onDeadlineChange={handleDeadlineChange}
-                savingId={savingId}
-                onAddTask={() => setShowAddTask(true)}
+          <div className="flex gap-lg items-start">
+            {/* Right column — main content */}
+            <div className="flex-1 min-w-0">
+              <ProgressTimeline
+                moveDate={moveDate}
+                destinationCity={destinationCity}
+                completed={progress?.completed ?? 0}
+                total={progress?.total ?? 0}
+                byStatus={progress?.by_status ?? {}}
               />
-            </section>
-          </>
+
+              <section className="mb-xl">
+                <div className="mb-md">
+                  <h2 className="font-headline-md text-headline-md text-on-surface">
+                    משימות לקראת המעבר
+                  </h2>
+                  <span className="font-label-md text-label-md text-on-surface-variant">
+                    {progress ? `${progress.completed} מתוך ${progress.total} משימות הושלמו` : ""}
+                  </span>
+                </div>
+                <TasksSection
+                  tasks={tasks}
+                  onStatusChange={handleStatusChange}
+                  onDeadlineChange={handleDeadlineChange}
+                  savingId={savingId}
+                  onAddTask={() => setShowAddTask(true)}
+                  pinnedIds={pinnedIds}
+                  onPin={handlePin}
+                  onUnpin={handleUnpin}
+                />
+              </section>
+            </div>
+
+            {/* Left column — daily board (sticky, fixed viewport height) */}
+            <div className="w-72 shrink-0 sticky top-32 h-[calc(100vh-9rem)]">
+              <DailyTasksBoard
+                tasks={tasks}
+                pinnedIds={pinnedIds}
+                onRemove={handleUnpin}
+                onStatusChange={handleStatusChange}
+              />
+            </div>
+          </div>
         )}
       </main>
     </div>
