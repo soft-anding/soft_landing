@@ -1,13 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { DEMO } from "../demo";
 
 const AuthContext = createContext(null);
-
-const DEMO_SESSION = {
-  user: { id: "demo-user", email: "demo@example.com", user_metadata: { full_name: "אורחת (תצוגה)" } },
-};
-const DEMO_PROFILE = { id: "demo-user" };
 
 async function loadProfile(userId) {
   const { data } = await supabase
@@ -19,13 +13,11 @@ async function loadProfile(userId) {
 }
 
 export function AuthProvider({ children }) {
-  const [session, setSession]         = useState(DEMO ? DEMO_SESSION : null);
-  const [userProfile, setUserProfile] = useState(DEMO ? DEMO_PROFILE : null);
-  const [loading, setLoading]         = useState(!DEMO);
+  const [session, setSession]         = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
-    if (DEMO) return;
-
     let active = true;
     let initialized = false;
     let currentUserId = null;
@@ -73,7 +65,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signInWithGoogle = () => {
-    if (DEMO) { setSession(DEMO_SESSION); return Promise.resolve({ error: null }); }
     return supabase.auth.signInWithOAuth({
       provider: "google",
       // Redirect back to the root so the post-login routing logic in App.jsx
@@ -83,11 +74,6 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = () => {
-    if (DEMO) {
-      setSession(null);
-      setUserProfile(false);
-      return Promise.resolve({ error: null });
-    }
     return supabase.auth.signOut();
   };
 

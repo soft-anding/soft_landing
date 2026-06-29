@@ -1,6 +1,4 @@
 import { supabase } from "./supabaseClient";
-import { DEMO } from "./demo";
-import { demoApi } from "./demoData";
 
 // Base URL of the FastAPI backend. Empty -> same origin (Vite proxy / prod static).
 const API_BASE = import.meta.env.VITE_API_URL || "";
@@ -141,5 +139,4 @@ const realApi = {
   },
 };
 
-// In demo mode, serve mock data with no backend (see demo.js / demoData.js).
-export const api = DEMO ? demoApi : realApi;
+export const api = realApi;
