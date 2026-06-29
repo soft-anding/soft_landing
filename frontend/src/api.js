@@ -112,6 +112,12 @@ const realApi = {
     return full;
   },
 
+  saveTaskAgentConversation: (messages) =>
+    request("/task-agent/save-conversation", { method: "POST", body: { messages } }),
+
+  saveDocumentsAgentConversation: (messages) =>
+    request("/documents-agent/save-conversation", { method: "POST", body: { messages } }),
+
   streamDocumentsAgentChat: async (messages, category, forms, imageBase64, imageMimeType, onChunk) => {
     const headers = { ...(await authHeader()), "Content-Type": "application/json" };
     const res = await fetch(`${API_BASE}/api/documents-agent/chat`, {

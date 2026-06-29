@@ -3,6 +3,9 @@ moving. Fetches the user's profile and their city's full forms list from the
 database on every request so the model always has up-to-date context (which
 city they're moving to, which forms exist, which are already checked).
 """
+import json
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,7 +15,8 @@ from openai import OpenAI, OpenAIError
 from ..auth import CurrentUser, get_current_user
 from ..catalog_service import _fetch_user_profile, fetch_forms
 from ..config import settings
-from ..schemas import DocumentsAgentChatRequest
+from ..schemas import DocumentsAgentChatRequest, SaveConversationRequest
+from ..supabase_client import get_supabase
 
 router = APIRouter(prefix="/documents-agent", tags=["documents-agent"])
 
@@ -87,6 +91,54 @@ def _stream_reply(client: OpenAI, messages: list[dict]):
                 yield delta.content
     except OpenAIError as exc:
         yield f"\n\n⚠️ שגיאה בפנייה לסוכן ה-AI: {exc}"
+
+
+def _generate_conversation_name(client: OpenAI, messages: list) -> str:
+    user_messages = [m for m in messages if m.role == "user"]
+    if not user_messages:
+        return f"שיחה {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
+    snippet = "\n".join(f"{m.role}: {m.content}" for m in messages[:12])
+    try:
+        resp = client.chat.completions.create(
+            model=settings.open_ai_model,
+            messages=[
+                {"role": "system", "content": "צור שם קצר (3-5 מילים בעברית) לשיחה הבאה עם עוזר המסמכים. החזר רק את השם, ללא פיסוק מיותר."},
+                {"role": "user", "content": snippet},
+            ],
+            max_tokens=20,
+        )
+        content = resp.choices[0].message.content
+        return content.strip() if content else f"שיחה {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
+    except Exception:
+        return f"שיחה {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
+
+
+@router.post("/save-conversation")
+def save_conversation(
+    payload: SaveConversationRequest,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
+    if not settings.documents_agent_openai_api_key:
+        raise HTTPException(status_code=503, detail="מפתח ה-API של סוכן המסמכים לא הוגדר.")
+    client = OpenAI(api_key=settings.documents_agent_openai_api_key)
+    name = _generate_conversation_name(client, payload.messages)
+    conv_id = str(uuid.uuid4())
+    messages_data = json.dumps(
+        [{"role": m.role, "content": m.content} for m in payload.messages],
+        ensure_ascii=False,
+    )
+    try:
+        get_supabase().table("documents_agent_conversations").insert({
+            "conversation_id": conv_id,
+            "user_id": user.id,
+            "conversation_name": name,
+            "messages": messages_data,
+            "status": "Completed",
+            "message_count": len(payload.messages),
+        }).execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"שגיאה בשמירת השיחה: {exc}") from exc
+    return {"conversation_id": conv_id, "conversation_name": name}
 
 
 @router.post("/chat")

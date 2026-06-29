@@ -33,6 +33,22 @@ function renderText(text) {
   });
 }
 
+function unwrapReply(text) {
+  if (!text || !text.trimStart().startsWith("{")) return text;
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed.reply === "string") return parsed.reply;
+  } catch {}
+  const prefix = '{"reply":"';
+  if (text.startsWith(prefix)) {
+    let inner = text.slice(prefix.length);
+    if (inner.endsWith('"}'))      inner = inner.slice(0, -2);
+    else if (inner.endsWith('"'))  inner = inner.slice(0, -1);
+    return inner.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  }
+  return text;
+}
+
 async function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -47,6 +63,8 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
   const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
   const textareaRef = useRef(null);
@@ -85,6 +103,27 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
 
   if (!open) return null;
 
+  async function handleEndConversation() {
+    const hasUserMessages = messages.some((m) => m.role === "user");
+    if (!hasUserMessages) {
+      setMessages([]);
+      onClose();
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await api.saveDocumentsAgentConversation(
+        messages.map((m) => ({ role: m.role, content: m.text }))
+      );
+      setMessages([]);
+      onClose();
+    } catch (err) {
+      setSaveError(err.message || "שגיאה לא ידועה");
+      setSaving(false);
+    }
+  }
+
   async function handleSend(e) {
     e.preventDefault();
     const text = input.trim();
@@ -115,11 +154,19 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
         (_chunk, full) => {
           setMessages((prev) => {
             const updated = [...prev];
-            updated[updated.length - 1] = { role: "assistant", text: full };
+            updated[updated.length - 1] = { role: "assistant", text: unwrapReply(full) };
             return updated;
           });
         }
       );
+      // Stream finished — unwrap JSON reply format if model returned {"reply":"..."}.
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last.role !== "assistant" || !last.text) return prev;
+        const clean = unwrapReply(last.text);
+        if (clean === last.text) return prev;
+        return [...prev.slice(0, -1), { ...last, text: clean }];
+      });
     } catch {
       setMessages((prev) => {
         const updated = [...prev];
@@ -149,13 +196,29 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
         >
           <span className="material-symbols-outlined text-base">close</span>
         </button>
-        <button
-          type="button"
-          onClick={() => { setMessages([]); onClose(); }}
-          className="absolute top-sm left-sm px-sm py-1 rounded-full border border-green-700 text-green-700 font-label-sm text-label-sm hover:bg-green-50 transition-colors"
-        >
-          סיים שיחה
-        </button>
+        {saveError ? (
+          <div className="absolute top-sm left-sm flex items-center gap-xs">
+            <span className="font-label-sm text-label-sm text-red-600 max-w-[140px] truncate" title={saveError}>
+              שגיאה: {saveError}
+            </span>
+            <button
+              type="button"
+              onClick={() => { setSaveError(null); setMessages([]); onClose(); }}
+              className="px-xs py-0.5 rounded-full border border-red-400 text-red-600 font-label-sm text-label-sm hover:bg-red-50 transition-colors text-xs"
+            >
+              סגור
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleEndConversation}
+            disabled={saving || sending}
+            className="absolute top-sm left-sm px-sm py-1 rounded-full border border-green-700 text-green-700 font-label-sm text-label-sm hover:bg-green-50 transition-colors disabled:opacity-60"
+          >
+            {saving ? "שומר..." : "סיום ושמירת השיחה"}
+          </button>
+        )}
         <div className="pr-4 pl-lg">
           <h3 className="font-label-md text-label-md font-bold text-on-surface text-right">
             עוזר המסמכים

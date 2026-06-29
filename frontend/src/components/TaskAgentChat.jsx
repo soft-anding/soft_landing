@@ -19,6 +19,27 @@ export function TaskAgentFab({ onClick }) {
 const GREETING =
   "היי! אני העוזר האישי שלך למעבר. אני כאן כדי לעזור לך לעשות סדר במשימות, להבין מה דחוף ומה אפשר לדחות, ולענות על כל שאלה לגבי התהליך. במה אפשר לעזור?";
 
+// Strip {"reply":"..."} wrapper that the model sometimes produces.
+// Works both on the complete JSON (after stream) and mid-stream partial text.
+function unwrapReply(text) {
+  if (!text || !text.trimStart().startsWith("{")) return text;
+  // Complete JSON — parse and extract.
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed.reply === "string") return parsed.reply;
+  } catch {}
+  // Mid-stream — strip the known prefix/suffix manually so display is clean
+  // even before the full JSON token is received.
+  const prefix = '{"reply":"';
+  if (text.startsWith(prefix)) {
+    let inner = text.slice(prefix.length);
+    if (inner.endsWith('"}'))      inner = inner.slice(0, -2);
+    else if (inner.endsWith('"'))  inner = inner.slice(0, -1);
+    return inner.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  }
+  return text;
+}
+
 // Extract [SUGGEST_DAILY:{...}] from text and return { clean, suggestion }.
 // Returns { clean: originalText, suggestion: null } if no annotation found.
 function parseSuggestion(text) {
@@ -38,6 +59,8 @@ export default function TaskAgentChat({ open, onClose }) {
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
   const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [pendingSuggestion, setPendingSuggestion] = useState(null);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
@@ -97,20 +120,21 @@ export default function TaskAgentChat({ open, onClose }) {
         (_chunk, full) => {
           setMessages((prev) => {
             const updated = [...prev];
-            updated[updated.length - 1] = { role: "assistant", text: full };
+            updated[updated.length - 1] = { role: "assistant", text: unwrapReply(full) };
             return updated;
           });
         }
       );
-      // Stream finished — parse suggestion annotation from the completed message.
+      // Stream finished — unwrap JSON reply format, then parse suggestion annotation.
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last.role !== "assistant" || !last.text) return prev;
-        const { clean, suggestion } = parseSuggestion(last.text);
+        const { clean, suggestion } = parseSuggestion(unwrapReply(last.text));
         if (suggestion) {
           setPendingSuggestion(suggestion);
           return [...prev.slice(0, -1), { ...last, text: clean }];
         }
+        if (clean !== last.text) return [...prev.slice(0, -1), { ...last, text: clean }];
         return prev;
       });
       window.dispatchEvent(new Event("tasks-changed"));
@@ -128,10 +152,27 @@ export default function TaskAgentChat({ open, onClose }) {
     }
   }
 
-  function handleEndConversation() {
-    setMessages([]);
-    setPendingSuggestion(null);
-    onClose();
+  async function handleEndConversation() {
+    const hasUserMessages = messages.some((m) => m.role === "user");
+    if (!hasUserMessages) {
+      setMessages([]);
+      setPendingSuggestion(null);
+      onClose();
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await api.saveTaskAgentConversation(
+        messages.map((m) => ({ role: m.role, content: m.text }))
+      );
+      setMessages([]);
+      setPendingSuggestion(null);
+      onClose();
+    } catch (err) {
+      setSaveError(err.message || "שגיאה לא ידועה");
+      setSaving(false);
+    }
   }
 
   return (
@@ -149,13 +190,29 @@ export default function TaskAgentChat({ open, onClose }) {
         >
           <span className="material-symbols-outlined text-base">close</span>
         </button>
-        <button
-          type="button"
-          onClick={handleEndConversation}
-          className="absolute top-sm left-sm px-sm py-1 rounded-full border border-green-700 text-green-700 font-label-sm text-label-sm hover:bg-green-50 transition-colors"
-        >
-          סיים שיחה
-        </button>
+        {saveError ? (
+          <div className="absolute top-sm left-sm flex items-center gap-xs">
+            <span className="font-label-sm text-label-sm text-red-600 max-w-[140px] truncate" title={saveError}>
+              שגיאה: {saveError}
+            </span>
+            <button
+              type="button"
+              onClick={() => { setSaveError(null); setMessages([]); setPendingSuggestion(null); onClose(); }}
+              className="px-xs py-0.5 rounded-full border border-red-400 text-red-600 font-label-sm text-label-sm hover:bg-red-50 transition-colors text-xs"
+            >
+              סגור
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleEndConversation}
+            disabled={saving || sending}
+            className="absolute top-sm left-sm px-sm py-1 rounded-full border border-green-700 text-green-700 font-label-sm text-label-sm hover:bg-green-50 transition-colors disabled:opacity-60"
+          >
+            {saving ? "שומר..." : "סיום ושמירת השיחה"}
+          </button>
+        )}
         <div className="pr-4 pl-lg">
           <h3 className="font-label-md text-label-md font-bold text-on-surface text-right">
             העוזר האישי שלך למעבר
