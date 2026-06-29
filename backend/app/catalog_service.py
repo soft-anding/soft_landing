@@ -81,6 +81,7 @@ def _normalize_right(row: dict) -> dict:
         "discount_amount": row.get("discount_amount"),
         "deadlines": row.get("deadlines"),
         "tags": _as_list(row.get("tags")),
+        "interest_categories": _as_list(row.get("interest_categories")),
     }
 
 
@@ -117,7 +118,7 @@ def _fetch_rights_items(city_slug: str | None = None) -> list[dict]:
     # and PostgREST lets you filter by a column without returning it.
     query = sb.table("rights_items").select(
         "id,title_he,description,eligibility_conditions,required_documents,"
-        "discount_amount,deadlines,category,source_url,tags"
+        "discount_amount,deadlines,category,source_url,tags,interest_categories"
     )
     if not settings.show_unverified:
         query = query.eq("verified", True)
@@ -135,7 +136,7 @@ def _fetch_user_profile(user_id: str) -> dict:
         sb.table("user_profiles")
         .select(
             "has_car,needs_movers,moving_companions,occupation,"
-            "marital_status,income_range,special_eligibility,destination_city"
+            "marital_status,income_range,special_eligibility,destination_city,interest_categories"
         )
         .eq("id", user_id)
         .limit(1)
@@ -371,6 +372,16 @@ def _merge_and_filter(
         item_tags = set(item.get("tags") or [])
         if item_tags and not item_tags & user_tags:
             continue
+
+        # Interest-category filter (rights_items only, AND with tag filter).
+        # Both sides must have an overlap; "all" on either side is a wildcard.
+        # Items with no interest_categories set (script not yet run) pass through.
+        if item["item_type"] == "rights_item":
+            item_cats = set(item.get("interest_categories") or [])
+            user_interests = set(profile.get("interest_categories") or ["all"]) if profile else {"all"}
+            if item_cats and "all" not in user_interests and "all" not in item_cats:
+                if not item_cats & user_interests:
+                    continue
 
         # Exclude moving_tasks that don't match the user's profile via relevance_rule.
         if item["item_type"] == "moving_task":

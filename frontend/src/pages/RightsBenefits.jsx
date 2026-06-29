@@ -143,11 +143,8 @@ export default function RightsBenefits() {
 
   const cityLabel = CITY_LABELS[destinationCity] || null;
 
-  // Stage 1: onboarding-selected interests (unchanged from before).
-  const interestFiltered = items.filter((item) => {
-    if (!interestCats || interestCats.includes("all")) return true;
-    return interestCats.includes(item.category);
-  });
+  // Backend already filters by interest_categories + tags; no client-side pass needed.
+  const interestFiltered = items;
 
   // Category chips are derived from interestFiltered (NOT from the
   // search-filtered results below), so the chip row stays stable while
