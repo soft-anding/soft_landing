@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AppHeader from "../components/AppHeader";
+import ShrinkToFitTitle from "../components/ShrinkToFitTitle";
 import SideDrawer from "../components/SideDrawer";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../auth/AuthContext";
@@ -42,9 +43,12 @@ function InfoCard({ item }) {
       </span>
 
       <div className="flex flex-col gap-xs flex-1 min-w-0">
-        <h4 className="font-headline-sm text-headline-sm text-on-surface line-clamp-2">
-          {item.title_he || "ללא כותרת"}
-        </h4>
+        <ShrinkToFitTitle
+          as="h4"
+          text={item.title_he || "ללא כותרת"}
+          lines={1}
+          className="font-headline-sm font-semibold text-on-surface"
+        />
 
         {item.summary && (
           <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2">
