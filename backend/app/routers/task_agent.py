@@ -355,6 +355,24 @@ def list_conversations(user: CurrentUser = Depends(get_current_user)) -> list[di
     return result.data or []
 
 
+@router.patch("/conversations/{conversation_id}")
+def update_conversation(
+    conversation_id: str,
+    payload: SaveConversationRequest,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
+    messages_data = [{"role": m.role, "content": m.content} for m in payload.messages]
+    try:
+        get_supabase().table("tasks_agent_conversations").update({
+            "messages": messages_data,
+            "message_count": len(payload.messages),
+            "status": "Completed",
+        }).eq("conversation_id", conversation_id).eq("user_id", user.id).execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"שגיאה בעדכון השיחה: {exc}") from exc
+    return {"conversation_id": conversation_id}
+
+
 @router.get("/conversations/{conversation_id}")
 def get_conversation(
     conversation_id: str,

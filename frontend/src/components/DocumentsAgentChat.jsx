@@ -68,6 +68,7 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
   const [view, setView] = useState("chat");
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [loadedConversationId, setLoadedConversationId] = useState(null);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
   const textareaRef = useRef(null);
@@ -115,11 +116,16 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
     }
     setSaving(true);
     setSaveError(null);
+    const payload = messages.map((m) => ({ role: m.role, content: m.text }));
     try {
-      await api.saveDocumentsAgentConversation(
-        messages.map((m) => ({ role: m.role, content: m.text }))
-      );
+      if (loadedConversationId) {
+        await api.updateDocumentsAgentConversation(loadedConversationId, payload);
+      } else {
+        await api.saveDocumentsAgentConversation(payload);
+      }
+      setSaving(false);
       setMessages([]);
+      setLoadedConversationId(null);
       onClose();
     } catch (err) {
       setSaveError(err.message || "שגיאה לא ידועה");
@@ -141,6 +147,7 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
     try {
       const data = await api.getDocumentsAgentConversation(id);
       setMessages(data.messages.map((m) => ({ role: m.role, text: m.content })));
+      setLoadedConversationId(id);
       setView("chat");
     } catch { /* ignore */ }
   }
@@ -251,7 +258,7 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
               disabled={saving || sending}
               className="text-[10px] leading-tight px-2 py-0.5 rounded-full border border-green-700 text-green-700 hover:bg-green-50 transition-colors disabled:opacity-60 whitespace-nowrap"
             >
-              {saving ? "שומר..." : "סיום ושמירת השיחה"}
+              {saving ? "שומר..." : loadedConversationId ? "עדכן וסיים שיחה" : "סיום ושמירת השיחה"}
             </button>
           )}
           <button
