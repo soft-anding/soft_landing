@@ -136,7 +136,7 @@ def _fetch_user_profile(user_id: str) -> dict:
         sb.table("user_profiles")
         .select(
             "has_car,needs_movers,moving_companions,occupation,"
-            "marital_status,income_range,special_eligibility,destination_city,interest_categories"
+            "marital_status,income_range,special_eligibility,destination_city,interest_categories,move_date"
         )
         .eq("id", user_id)
         .limit(1)

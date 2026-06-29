@@ -5,6 +5,7 @@ can also act on tasks via OpenAI tool-calling: add a custom task, change a
 task's status, or change a task's deadline (see task_actions.py).
 """
 import json
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 
@@ -161,10 +162,14 @@ def _tasks_context(items: list[dict]) -> str:
     for it in items:
         deadline = it.get("deadline_date") or it.get("deadline_type") or "ללא מועד שנקבע"
         category = it.get("category_label") or it.get("category") or "כללי"
-        lines.append(
+        line = (
             f"- ({it['item_type']}#{it['item_id']}) [{category}] {it['title_he']} "
             f"| סטטוס: {it['status']} | מועד: {deadline}"
         )
+        steps = it.get("action_steps") or []
+        if steps:
+            line += f" | שלבים: {'; '.join(steps)}"
+        lines.append(line)
     return "\n".join(lines)
 
 
@@ -310,6 +315,7 @@ def chat(
     items, profile = fetch_items_with_status_and_profile(user.id, item_type="moving_task")
     context = (
         f"{system_prompt}\n\n"
+        f"תאריך היום: {date.today().isoformat()}\n\n"
         f"להלן המשימות הנוכחיות של המשתמש/ת לקראת המעבר (item_type#item_id לשימוש בכלים):\n"
         f"{_tasks_context(items)}\n\n"
         f"פרטי פרופיל המשתמש/ת: {_profile_context(profile)}"
