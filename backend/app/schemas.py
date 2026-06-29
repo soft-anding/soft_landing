@@ -103,3 +103,5 @@ class DocumentsAgentChatRequest(BaseModel):
     messages: list[TaskAgentMessage]
     category: str | None = None
     forms: list[str] = []
+    image_base64: str | None = None
+    image_mime_type: str | None = None

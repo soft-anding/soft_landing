@@ -72,6 +72,20 @@ def chat(
     messages: list[dict] = [{"role": "system", "content": context}]
     messages += [{"role": m.role, "content": m.content} for m in payload.messages]
 
+    # Attach the image to the last user message as a vision payload.
+    if payload.image_base64:
+        mime = payload.image_mime_type or "image/jpeg"
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i]["role"] == "user":
+                messages[i] = {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": messages[i]["content"] or ""},
+                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{payload.image_base64}"}},
+                    ],
+                }
+                break
+
     client = OpenAI(api_key=settings.documents_agent_openai_api_key)
     return StreamingResponse(
         _stream_reply(client, messages), media_type="text/plain; charset=utf-8"

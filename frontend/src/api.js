@@ -106,12 +106,12 @@ const realApi = {
     return full;
   },
 
-  streamDocumentsAgentChat: async (messages, category, forms, onChunk) => {
+  streamDocumentsAgentChat: async (messages, category, forms, imageBase64, imageMimeType, onChunk) => {
     const headers = { ...(await authHeader()), "Content-Type": "application/json" };
     const res = await fetch(`${API_BASE}/api/documents-agent/chat`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ messages, category, forms }),
+      body: JSON.stringify({ messages, category, forms, image_base64: imageBase64 || null, image_mime_type: imageMimeType || null }),
     });
 
     if (!res.ok) {
