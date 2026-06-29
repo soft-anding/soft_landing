@@ -202,6 +202,9 @@ def generate_daily_notifications() -> int:
             changed += len(to_insert)
             if telegram_chat_id:
                 for row in to_insert:
-                    send_message(telegram_chat_id, row["content"])
+                    text = row["content"]
+                    if row["task_title"]:
+                        text += f"\n{row['task_title']}"
+                    send_message(telegram_chat_id, text)
 
     return changed
