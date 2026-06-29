@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { prefetchDailyBoard } from "../dailyBoardCache";
+import { prefetchDashboard } from "../dashboardCache";
 import { prefetchForms } from "../formsCache";
 import { prefetchRights } from "../rightsCache";
 import NotificationsBell from "./NotificationsBell";
@@ -37,6 +38,7 @@ export default function AppHeader() {
   useEffect(() => {
     prefetchRights(userProfile?.destination_city ?? null);
     prefetchForms(userProfile?.destination_city ?? null);
+    prefetchDashboard(userProfile?.destination_city ?? null);
   }, [userProfile?.destination_city]);
 
   // Same idea, but the daily board doesn't depend on the profile — fetch it

@@ -60,7 +60,7 @@ export default function Login() {
                 <span className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0">
                   <GoogleIcon size={16} />
                 </span>
-                {busy ? "מתחברת…" : "התחברות עם גוגל"}
+                {busy ? "מתחבר…" : "התחברות עם גוגל"}
               </button>
 
               {error && <p className="mt-xs font-label-md text-label-md text-error">{error}</p>}

@@ -7,30 +7,9 @@ import Spinner from "../components/Spinner";
 import TaskCard from "../components/TaskCard";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
+import { dashboardCacheKey, readDashboardCache, writeDashboardCache } from "../dashboardCache";
 import { readDailyBoardCache, writeDailyBoardCache } from "../dailyBoardCache";
 import { STATUSES } from "../statusConfig";
-
-// ── Session cache — so leaving the tab/page and coming back shows the data
-// instantly instead of re-running the loading spinner. A background fetch
-// still refreshes it on every mount, just without blocking the UI.
-const CACHE_PREFIX = "dashboard_cache:";
-
-function readCache(key) {
-  try {
-    const raw = sessionStorage.getItem(CACHE_PREFIX + key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeCache(key, data) {
-  try {
-    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data));
-  } catch {
-    // Storage full/unavailable — caching is a nice-to-have, ignore.
-  }
-}
 
 // ── Derive per-category totals + completion counts from the tasks array ───────
 function getCategorySummaries(tasks) {
@@ -226,6 +205,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [urgencySort, setUrgencySort] = useState(false);
   const wrapperRef = useRef(null);
+  const expandedHeaderRef = useRef(null);
 
   function fadeTransition(callback) {
     const el = wrapperRef.current;
@@ -233,7 +213,15 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
     el.style.opacity = "0";
     setTimeout(() => {
       callback();
-      requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = "1"; }));
+      requestAnimationFrame(() => {
+        if (expandedHeaderRef.current) {
+          const top = expandedHeaderRef.current.getBoundingClientRect().top + window.scrollY - 136;
+          window.scrollTo({ top, behavior: "instant" });
+        } else {
+          window.scrollTo(0, 0);
+        }
+        requestAnimationFrame(() => { el.style.opacity = "1"; });
+      });
     }, 280);
   }
 
@@ -305,10 +293,12 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
       const otherSummaries = summaries.filter((s) => s.category !== catKey);
       return (
         <>
-          <CategorySummaryBox
-            summary={pinnedSummary}
-            onCollapse={() => fadeTransition(() => setExpandedCategory(null))}
-          />
+          <div ref={expandedHeaderRef}>
+            <CategorySummaryBox
+              summary={pinnedSummary}
+              onCollapse={() => fadeTransition(() => setExpandedCategory(null))}
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md mt-lg">
             {catTasks.map((item) => {
               const id = `${item.item_type}:${item.item_id}`;
@@ -327,8 +317,8 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
             })}
           </div>
           {otherSummaries.length > 0 && (
-            <div>
-              <p className="font-label-sm text-label-sm text-on-surface-variant mb-sm text-right">
+            <div className="mt-xl pt-lg border-t border-outline-variant/30">
+              <p className="font-label-md text-label-md text-on-surface-variant mb-md text-right">
                 קטגוריות נוספות
               </p>
               <div className={`grid ${gridColsClass(otherSummaries.length)} gap-sm`}>
@@ -378,8 +368,8 @@ export default function Dashboard() {
   const moveDate        = userProfile?.move_date        ?? null;
   const destinationCity = userProfile?.destination_city ?? null;
 
-  const cacheKey = destinationCity || "none";
-  const cached   = readCache(cacheKey);
+  const cacheKey = dashboardCacheKey(destinationCity);
+  const cached   = readDashboardCache(cacheKey);
 
   const [progress,     setProgress]     = useState(cached?.progress ?? null);
   const [tasks,        setTasks]        = useState(cached?.tasks ?? []);
@@ -481,14 +471,14 @@ export default function Dashboard() {
           if (!alive) return;
           setProgress(p);
           setTasks(t);
-          writeCache(cacheKey, { progress: p, tasks: t });
+          writeDashboardCache(cacheKey, { progress: p, tasks: t });
         })
         .catch((e) => alive && setError(e.message))
         .finally(() => alive && showSpinner && setLoading(false));
     }
     // Only show the spinner when there's nothing cached to show meanwhile —
     // this still refetches fresh data every mount, just silently.
-    load(!readCache(cacheKey));
+    load(!readDashboardCache(cacheKey));
 
     // The task-AI chat changes tasks server-side with no direct callback into
     // this component, so it broadcasts this event instead — refetch silently
@@ -508,7 +498,7 @@ export default function Dashboard() {
       const next = [...prev, newItem];
       const nextProgress = computeProgress(next);
       setProgress(nextProgress);
-      writeCache(cacheKey, { progress: nextProgress, tasks: next });
+      writeDashboardCache(cacheKey, { progress: nextProgress, tasks: next });
       return next;
     });
   };
@@ -528,7 +518,7 @@ export default function Dashboard() {
         );
         const nextProgress = computeProgress(next);
         setProgress(nextProgress);
-        writeCache(cacheKey, { progress: nextProgress, tasks: next });
+        writeDashboardCache(cacheKey, { progress: nextProgress, tasks: next });
         return next;
       });
     } catch (e) {
@@ -547,7 +537,7 @@ export default function Dashboard() {
         const next = prev.map((it) =>
           it.item_type === updated.item_type && it.item_id === updated.item_id ? updated : it
         );
-        writeCache(cacheKey, { progress, tasks: next });
+        writeDashboardCache(cacheKey, { progress, tasks: next });
         return next;
       });
     } catch (e) {

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { dashboardCacheKey, prefetchDashboard, readDashboardCache } from "../dashboardCache";
 
 const AuthContext = createContext(null);
 
@@ -48,7 +49,18 @@ export function AuthProvider({ children }) {
 
         if (newSession?.user) {
           const profile = await loadProfile(newSession.user.id);
-          if (active) setUserProfile(profile);
+          if (active) {
+            // Prefetch dashboard data before navigating so the user doesn't see a loading spinner.
+            // Only wait when the cache is empty (fresh login / new tab) — on page refreshes the
+            // cache already exists so we skip the await to keep auth fast.
+            if (profile && profile.destination_city) {
+              const cacheKey = dashboardCacheKey(profile.destination_city);
+              if (!readDashboardCache(cacheKey)) {
+                await prefetchDashboard(profile.destination_city).catch(() => {});
+              }
+            }
+            setUserProfile(profile);
+          }
         } else {
           if (active) setUserProfile(false);
         }
