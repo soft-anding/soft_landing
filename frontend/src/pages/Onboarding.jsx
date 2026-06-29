@@ -4,6 +4,16 @@ import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
 import { supabase } from "../supabaseClient";
 
+const EXCLUDED_TOPIC_CATEGORIES = new Set([
+  "אריזה והובלה",
+  "הכנת הבית החדש",
+  "פינוי הבית הישן",
+  "פינוי דירה ישנה",
+  "בירוקרטיה של עיריות",
+  "בירוקרטיה ממשלתית",
+  "parking_permit",
+]);
+
 // ── Static option maps ────────────────────────────────────────────────────────
 
 const DESTINATION_OPTIONS = [
@@ -117,7 +127,7 @@ export default function Onboarding() {
   // Fetch dynamic categories from the backend catalog
   useEffect(() => {
     api.categories()
-      .then((cats) => setCategories(cats || []))
+      .then((cats) => setCategories((cats || []).filter((c) => !EXCLUDED_TOPIC_CATEGORIES.has(c.slug))))
       .catch(() => setCategories([]))
       .finally(() => setCatsLoading(false));
   }, []);

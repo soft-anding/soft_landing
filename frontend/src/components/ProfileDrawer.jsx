@@ -4,6 +4,16 @@ import { supabase } from "../supabaseClient";
 import { api } from "../api";
 import SideDrawer from "./SideDrawer";
 
+const EXCLUDED_TOPIC_CATEGORIES = new Set([
+  "אריזה והובלה",
+  "הכנת הבית החדש",
+  "פינוי הבית הישן",
+  "פינוי דירה ישנה",
+  "בירוקרטיה של עיריות",
+  "בירוקרטיה ממשלתית",
+  "parking_permit",
+]);
+
 const CITY_OPTIONS = [
   { value: "jerusalem", label: "ירושלים" },
   { value: "tel_aviv",  label: "תל אביב–יפו" },
@@ -124,7 +134,7 @@ export default function ProfileDrawer({ open, onClose }) {
   useEffect(() => {
     if (!open || categories.length > 0) return;
     api.categories()
-      .then((cats) => setCategories(cats || []))
+      .then((cats) => setCategories((cats || []).filter((c) => !EXCLUDED_TOPIC_CATEGORIES.has(c.slug))))
       .catch(() => {});
   }, [open]);
 

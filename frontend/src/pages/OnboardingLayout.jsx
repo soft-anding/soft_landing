@@ -4,6 +4,16 @@ import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
 import Spinner from "../components/Spinner";
 
+const EXCLUDED_TOPIC_CATEGORIES = new Set([
+  "אריזה והובלה",
+  "הכנת הבית החדש",
+  "פינוי הבית הישן",
+  "פינוי דירה ישנה",
+  "בירוקרטיה של עיריות",
+  "בירוקרטיה ממשלתית",
+  "parking_permit",
+]);
+
 export const EMPTY_FORM = {
   full_name:            "",
   origin_city:          "",
@@ -48,7 +58,7 @@ export default function OnboardingLayout() {
   // them wait on navigation there.
   useEffect(() => {
     api.categories()
-      .then((cats) => setCategories(cats || []))
+      .then((cats) => setCategories((cats || []).filter((c) => !EXCLUDED_TOPIC_CATEGORIES.has(c.slug))))
       .catch(() => setCategories([]))
       .finally(() => setCatsLoading(false));
   }, []);
