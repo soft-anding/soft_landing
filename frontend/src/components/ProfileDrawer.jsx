@@ -121,6 +121,11 @@ export default function ProfileDrawer({ open, onClose }) {
   const [saveError, setSaveError] = useState(null);
   const [saved, setSaved]         = useState(false);
 
+  const [tgRequesting, setTgRequesting] = useState(false);
+  const [tgAwaiting, setTgAwaiting]     = useState(false);
+  const [tgError, setTgError]           = useState(null);
+  const telegramConnected = Boolean(userProfile?.telegram_chat_id);
+
   // Re-sync form whenever the drawer opens or the loaded profile changes
   useEffect(() => {
     if (open && userProfile) {
@@ -137,6 +142,32 @@ export default function ProfileDrawer({ open, onClose }) {
       .then((cats) => setCategories((cats || []).filter((c) => !EXCLUDED_TOPIC_CATEGORIES.has(c.slug))))
       .catch(() => {});
   }, [open]);
+
+  // While waiting for the user to hit Start in the bot, poll the profile so
+  // "מחובר/ת" appears as soon as telegram_service.poll_updates links the chat.
+  useEffect(() => {
+    if (!open || !tgAwaiting || telegramConnected) return;
+    const interval = setInterval(refreshProfile, 3000);
+    return () => clearInterval(interval);
+  }, [open, tgAwaiting, telegramConnected]);
+
+  useEffect(() => {
+    if (telegramConnected) setTgAwaiting(false);
+  }, [telegramConnected]);
+
+  async function handleConnectTelegram() {
+    setTgRequesting(true);
+    setTgError(null);
+    try {
+      const { deep_link } = await api.getTelegramLinkCode();
+      window.open(deep_link, "_blank", "noopener,noreferrer");
+      setTgAwaiting(true);
+    } catch (e) {
+      setTgError(e.message);
+    } finally {
+      setTgRequesting(false);
+    }
+  }
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -423,6 +454,39 @@ export default function ProfileDrawer({ open, onClose }) {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Telegram notifications ───────────────────── */}
+        <div className={sectionCls}>
+          <p className={secTitleCls}>התראות בטלגרם</p>
+          {telegramConnected ? (
+            <p className="flex items-center gap-xs font-body-md text-body-md text-on-surface">
+              <span className="material-symbols-outlined text-base text-primary">check_circle</span>
+              מחובר/ת לבוט הטלגרם
+            </p>
+          ) : (
+            <div className={fieldCls}>
+              <p className="font-body-md text-body-md text-on-surface-variant mb-sm">
+                קבלו את ההתראות מהמערכת גם בטלגרם.
+              </p>
+              <button
+                type="button"
+                onClick={handleConnectTelegram}
+                disabled={tgRequesting}
+                className="border border-outline-variant text-on-surface px-md py-sm rounded-full font-label-sm text-label-sm hover:bg-surface-container-low active:scale-95 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {tgRequesting ? "מתחבר…" : "התחבר לבוט הטלגרם"}
+              </button>
+              {tgAwaiting && (
+                <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
+                  פתחו את הצ׳אט עם הבוט ולחצו Start — הסטטוס כאן יתעדכן אוטומטית.
+                </p>
+              )}
+              {tgError && (
+                <p className="font-label-sm text-label-sm text-error mt-xs">שגיאה: {tgError}</p>
+              )}
             </div>
           )}
         </div>

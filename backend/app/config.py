@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # not a user JWT, since the job acts on every user, not one logged-in caller.
     internal_job_secret: str = ""
 
+    # Telegram bot that mirrors in-app notifications — see telegram_service.py
+    telegram_bot_token: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

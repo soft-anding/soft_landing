@@ -8,6 +8,7 @@ from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +17,8 @@ from .auth import CurrentUser, get_current_user
 from .config import settings
 from .constants import STATUSES
 from .notification_service import TZ, generate_daily_notifications
-from .routers import catalog, documents_agent, health, internal, task_agent, tracking
+from .routers import catalog, documents_agent, health, internal, task_agent, telegram, tracking
+from .telegram_service import poll_updates
 
 scheduler = BackgroundScheduler(timezone=TZ)
 
@@ -28,6 +30,8 @@ async def lifespan(_app: FastAPI):
         CronTrigger(hour=8, minute=0, timezone=TZ),
         id="daily_notifications",
     )
+    if settings.telegram_bot_token:
+        scheduler.add_job(poll_updates, IntervalTrigger(seconds=10), id="telegram_poll")
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -50,6 +54,7 @@ api.include_router(tracking.router)
 api.include_router(task_agent.router)
 api.include_router(documents_agent.router)
 api.include_router(internal.router)
+api.include_router(telegram.router)
 
 
 @api.get("/statuses", tags=["meta"])

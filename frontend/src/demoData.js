@@ -265,4 +265,6 @@ export const demoApi = {
     onChunk(text, text);
     return text;
   },
+
+  getTelegramLinkCode: () => delay({ code: "DEMO1234", deep_link: "https://t.me/" }),
 };

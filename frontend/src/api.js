@@ -66,6 +66,8 @@ const realApi = {
   setDeadline: (itemType, itemId, payload) =>
     request(`/items/${itemType}/${itemId}/deadline`, { method: "PUT", body: payload }),
 
+  getTelegramLinkCode: () => request("/telegram/link-code", { method: "POST" }),
+
   ask: (payload) =>
     request("/ask", { method: "POST", body: payload }),
 

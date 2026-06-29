@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 from .catalog_service import fetch_items_with_status
 from .constants import DONE_STATUS
 from .supabase_client import get_supabase
+from .telegram_service import send_message
 
 TZ = ZoneInfo("Asia/Jerusalem")
 
@@ -151,7 +152,7 @@ def generate_daily_notifications() -> int:
     today = _today()
     start_of_today = datetime.combine(today, datetime.min.time(), tzinfo=TZ).isoformat()
 
-    profiles = sb.table("user_profiles").select("id,move_date").execute().data or []
+    profiles = sb.table("user_profiles").select("id,move_date,telegram_chat_id").execute().data or []
 
     changed = 0
     for profile in profiles:
@@ -159,6 +160,7 @@ def generate_daily_notifications() -> int:
         if not move_date:
             continue
         user_id = profile["id"]
+        telegram_chat_id = profile.get("telegram_chat_id")
 
         candidates = _candidates_for_user(user_id, move_date, today)
         if not candidates:
@@ -198,5 +200,8 @@ def generate_daily_notifications() -> int:
         if to_insert:
             sb.table("notifications").insert(to_insert).execute()
             changed += len(to_insert)
+            if telegram_chat_id:
+                for row in to_insert:
+                    send_message(telegram_chat_id, row["content"])
 
     return changed
