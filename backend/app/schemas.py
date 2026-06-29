@@ -107,6 +107,10 @@ class DocumentsAgentChatRequest(BaseModel):
     image_mime_type: str | None = None
 
 
+class SaveConversationRequest(BaseModel):
+    messages: list[TaskAgentMessage]
+
+
 class DailyBoardKey(BaseModel):
     item_type: str
     item_id: int

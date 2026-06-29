@@ -112,6 +112,20 @@ const realApi = {
     return full;
   },
 
+  saveTaskAgentConversation: (messages) =>
+    request("/task-agent/save-conversation", { method: "POST", body: { messages } }),
+  getTaskAgentConversations: () => request("/task-agent/conversations"),
+  getTaskAgentConversation: (id) => request(`/task-agent/conversations/${id}`),
+  updateTaskAgentConversation: (id, messages) =>
+    request(`/task-agent/conversations/${id}`, { method: "PATCH", body: { messages } }),
+
+  saveDocumentsAgentConversation: (messages) =>
+    request("/documents-agent/save-conversation", { method: "POST", body: { messages } }),
+  getDocumentsAgentConversations: () => request("/documents-agent/conversations"),
+  getDocumentsAgentConversation: (id) => request(`/documents-agent/conversations/${id}`),
+  updateDocumentsAgentConversation: (id, messages) =>
+    request(`/documents-agent/conversations/${id}`, { method: "PATCH", body: { messages } }),
+
   streamDocumentsAgentChat: async (messages, category, forms, imageBase64, imageMimeType, onChunk) => {
     const headers = { ...(await authHeader()), "Content-Type": "application/json" };
     const res = await fetch(`${API_BASE}/api/documents-agent/chat`, {

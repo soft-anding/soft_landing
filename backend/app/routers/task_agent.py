@@ -5,7 +5,8 @@ can also act on tasks via OpenAI tool-calling: add a custom task, change a
 task's status, or change a task's deadline (see task_actions.py).
 """
 import json
-from datetime import date
+import uuid
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,7 +18,8 @@ from ..auth import CurrentUser, get_current_user
 from ..catalog_service import fetch_items_with_status_and_profile
 from ..config import settings
 from ..constants import CUSTOM_TASK_CATEGORIES, STATUSES
-from ..schemas import TaskAgentChatRequest
+from ..schemas import SaveConversationRequest, TaskAgentChatRequest
+from ..supabase_client import get_supabase
 from .daily_board import list_daily_board
 
 router = APIRouter(prefix="/task-agent", tags=["task-agent"])
@@ -311,6 +313,105 @@ def _stream_reply(client: OpenAI, messages: list[dict], user_id: str, items: lis
                 yield delta.content
     except OpenAIError as exc:
         yield f"\n\n⚠️ שגיאה בפנייה לסוכן ה-AI: {exc}"
+
+
+def _generate_conversation_name(client: OpenAI, messages: list) -> str:
+    user_messages = [m for m in messages if m.role == "user"]
+    if not user_messages:
+        return f"שיחה {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
+    snippet = "\n".join(f"{m.role}: {m.content}" for m in messages[:12])
+    try:
+        resp = client.chat.completions.create(
+            model=settings.open_ai_model,
+            messages=[
+                {"role": "system", "content": "צור שם קצר (3-5 מילים בעברית) לשיחה הבאה עם עוזר המשימות. החזר רק את השם, ללא פיסוק מיותר."},
+                {"role": "user", "content": snippet},
+            ],
+            max_tokens=20,
+        )
+        content = resp.choices[0].message.content
+        return content.strip() if content else f"שיחה {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
+    except Exception:
+        return f"שיחה {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
+
+
+@router.post("/save-conversation")
+def save_conversation(
+    payload: SaveConversationRequest,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
+    if not settings.tasks_agent_openai_api_key:
+        raise HTTPException(status_code=503, detail="מפתח ה-API של סוכן המשימות לא הוגדר.")
+    client = OpenAI(api_key=settings.tasks_agent_openai_api_key)
+    name = _generate_conversation_name(client, payload.messages)
+    conv_id = str(uuid.uuid4())
+    messages_data = [{"role": m.role, "content": m.content} for m in payload.messages]
+    try:
+        get_supabase().table("tasks_agent_conversations").insert({
+            "conversation_id": conv_id,
+            "user_id": user.id,
+            "conversation_name": name,
+            "messages": messages_data,
+            "status": "Completed",
+            "message_count": len(payload.messages),
+        }).execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"שגיאה בשמירת השיחה: {exc}") from exc
+    return {"conversation_id": conv_id, "conversation_name": name}
+
+
+@router.get("/conversations")
+def list_conversations(user: CurrentUser = Depends(get_current_user)) -> list[dict]:
+    result = (
+        get_supabase()
+        .table("tasks_agent_conversations")
+        .select("conversation_id, conversation_name, message_count, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return result.data or []
+
+
+@router.patch("/conversations/{conversation_id}")
+def update_conversation(
+    conversation_id: str,
+    payload: SaveConversationRequest,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
+    messages_data = [{"role": m.role, "content": m.content} for m in payload.messages]
+    try:
+        get_supabase().table("tasks_agent_conversations").update({
+            "messages": messages_data,
+            "message_count": len(payload.messages),
+            "status": "Completed",
+        }).eq("conversation_id", conversation_id).eq("user_id", user.id).execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"שגיאה בעדכון השיחה: {exc}") from exc
+    return {"conversation_id": conversation_id}
+
+
+@router.get("/conversations/{conversation_id}")
+def get_conversation(
+    conversation_id: str,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
+    result = (
+        get_supabase()
+        .table("tasks_agent_conversations")
+        .select("conversation_id, conversation_name, messages, created_at")
+        .eq("conversation_id", conversation_id)
+        .eq("user_id", user.id)
+        .single()
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="שיחה לא נמצאה.")
+    row = result.data
+    msgs = row["messages"]
+    if isinstance(msgs, str):
+        msgs = json.loads(msgs)
+    return {"conversation_id": row["conversation_id"], "conversation_name": row["conversation_name"], "messages": msgs}
 
 
 @router.post("/chat")

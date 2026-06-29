@@ -19,6 +19,27 @@ export function TaskAgentFab({ onClick }) {
 const GREETING =
   "היי! אני העוזר האישי שלך למעבר. אני כאן כדי לעזור לך לעשות סדר במשימות, להבין מה דחוף ומה אפשר לדחות, ולענות על כל שאלה לגבי התהליך. במה אפשר לעזור?";
 
+// Strip {"reply":"..."} wrapper that the model sometimes produces.
+// Works both on the complete JSON (after stream) and mid-stream partial text.
+function unwrapReply(text) {
+  if (!text || !text.trimStart().startsWith("{")) return text;
+  // Complete JSON — parse and extract.
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed.reply === "string") return parsed.reply;
+  } catch {}
+  // Mid-stream — strip the known prefix/suffix manually so display is clean
+  // even before the full JSON token is received.
+  const prefix = '{"reply":"';
+  if (text.startsWith(prefix)) {
+    let inner = text.slice(prefix.length);
+    if (inner.endsWith('"}'))      inner = inner.slice(0, -2);
+    else if (inner.endsWith('"'))  inner = inner.slice(0, -1);
+    return inner.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  }
+  return text;
+}
+
 // Extract [SUGGEST_DAILY:{...}] from text and return { clean, suggestion }.
 // Returns { clean: originalText, suggestion: null } if no annotation found.
 function parseSuggestion(text) {
@@ -38,6 +59,12 @@ export default function TaskAgentChat({ open, onClose }) {
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
   const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [view, setView] = useState("chat"); // "chat" | "history"
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [loadedConversationId, setLoadedConversationId] = useState(null);
   const [pendingSuggestion, setPendingSuggestion] = useState(null);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
@@ -78,6 +105,25 @@ export default function TaskAgentChat({ open, onClose }) {
     setPendingSuggestion(null);
   }
 
+  async function openHistory() {
+    setView("history");
+    setHistoryLoading(true);
+    try {
+      const data = await api.getTaskAgentConversations();
+      setHistory(data);
+    } catch { setHistory([]); }
+    finally { setHistoryLoading(false); }
+  }
+
+  async function loadConversation(id) {
+    try {
+      const data = await api.getTaskAgentConversation(id);
+      setMessages(data.messages.map((m) => ({ role: m.role, text: m.content })));
+      setLoadedConversationId(id);
+      setView("chat");
+    } catch { /* ignore */ }
+  }
+
   async function handleSend(e) {
     e.preventDefault();
     const text = input.trim();
@@ -97,20 +143,21 @@ export default function TaskAgentChat({ open, onClose }) {
         (_chunk, full) => {
           setMessages((prev) => {
             const updated = [...prev];
-            updated[updated.length - 1] = { role: "assistant", text: full };
+            updated[updated.length - 1] = { role: "assistant", text: unwrapReply(full) };
             return updated;
           });
         }
       );
-      // Stream finished — parse suggestion annotation from the completed message.
+      // Stream finished — unwrap JSON reply format, then parse suggestion annotation.
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last.role !== "assistant" || !last.text) return prev;
-        const { clean, suggestion } = parseSuggestion(last.text);
+        const { clean, suggestion } = parseSuggestion(unwrapReply(last.text));
         if (suggestion) {
           setPendingSuggestion(suggestion);
           return [...prev.slice(0, -1), { ...last, text: clean }];
         }
+        if (clean !== last.text) return [...prev.slice(0, -1), { ...last, text: clean }];
         return prev;
       });
       window.dispatchEvent(new Event("tasks-changed"));
@@ -128,10 +175,32 @@ export default function TaskAgentChat({ open, onClose }) {
     }
   }
 
-  function handleEndConversation() {
-    setMessages([]);
-    setPendingSuggestion(null);
-    onClose();
+  async function handleEndConversation() {
+    const hasUserMessages = messages.some((m) => m.role === "user");
+    if (!hasUserMessages) {
+      setMessages([]);
+      setPendingSuggestion(null);
+      onClose();
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    const payload = messages.map((m) => ({ role: m.role, content: m.text }));
+    try {
+      if (loadedConversationId) {
+        await api.updateTaskAgentConversation(loadedConversationId, payload);
+      } else {
+        await api.saveTaskAgentConversation(payload);
+      }
+      setSaving(false);
+      setMessages([]);
+      setPendingSuggestion(null);
+      setLoadedConversationId(null);
+      onClose();
+    } catch (err) {
+      setSaveError(err.message || "שגיאה לא ידועה");
+      setSaving(false);
+    }
   }
 
   return (
@@ -140,33 +209,89 @@ export default function TaskAgentChat({ open, onClose }) {
       dir="rtl"
       className="fixed bottom-6 left-6 z-[60] w-[340px] h-[460px] bg-white rounded-2xl soft-shadow border border-outline-variant/30 flex flex-col overflow-hidden"
     >
-      <div className="relative px-md py-sm border-b border-outline-variant/30 shrink-0">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="סגור"
-          className="absolute top-sm right-sm w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
-        >
-          <span className="material-symbols-outlined text-base">close</span>
-        </button>
-        <button
-          type="button"
-          onClick={handleEndConversation}
-          className="absolute top-sm left-sm px-sm py-1 rounded-full border border-green-700 text-green-700 font-label-sm text-label-sm hover:bg-green-50 transition-colors"
-        >
-          סיים שיחה
-        </button>
-        <div className="pr-4 pl-lg">
-          <h3 className="font-label-md text-label-md font-bold text-on-surface text-right">
+      <div className="flex items-center justify-between px-md py-sm border-b border-outline-variant/30 shrink-0 gap-xs">
+        {/* Right: close + title */}
+        <div className="flex items-center gap-xs">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="סגור"
+            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
+          >
+            <span className="material-symbols-outlined text-base">close</span>
+          </button>
+          <h3 className="font-label-md text-label-md font-bold text-on-surface leading-tight">
             העוזר האישי שלך למעבר
           </h3>
-          <p className="font-label-sm text-label-sm text-on-surface-variant text-right">
-            אני כאן כדי לעזור לך לעשות סדר במשימות
-          </p>
+        </div>
+
+        {/* Left: save + history buttons stacked */}
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
+          {saveError ? (
+            <div className="flex items-center gap-xs">
+              <span className="text-red-600 text-[10px] max-w-[110px] truncate" title={saveError}>
+                שגיאה: {saveError}
+              </span>
+              <button
+                type="button"
+                onClick={() => { setSaveError(null); setMessages([]); setPendingSuggestion(null); onClose(); }}
+                className="text-[10px] text-red-600 underline"
+              >
+                סגור
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleEndConversation}
+              disabled={saving || sending}
+              className="text-[10px] leading-tight px-2 py-0.5 rounded-full border border-green-700 text-green-700 hover:bg-green-50 transition-colors disabled:opacity-60 whitespace-nowrap"
+            >
+              {saving ? "שומר..." : loadedConversationId ? "עדכן וסיים שיחה" : "סיום ושמירת השיחה"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={view === "history" ? () => setView("chat") : openHistory}
+            className="text-[10px] leading-tight text-on-surface-variant hover:text-primary transition-colors flex items-center gap-0.5"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: "11px" }}>
+              {view === "history" ? "chat" : "history"}
+            </span>
+            {view === "history" ? "חזור לצ'אט" : "שיחות קודמות"}
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-md py-md space-y-xs">
+      {/* History view */}
+      {view === "history" && (
+        <div className="flex-1 overflow-y-auto px-md py-md space-y-xs">
+          <p className="font-label-sm text-label-sm text-on-surface-variant text-right mb-sm">שיחות שמורות</p>
+          {historyLoading && <p className="text-xs text-on-surface-variant text-center">טוען...</p>}
+          {!historyLoading && history.length === 0 && (
+            <p className="text-xs text-on-surface-variant text-center">אין שיחות שמורות עדיין</p>
+          )}
+          {history.map((conv) => (
+            <button
+              key={conv.conversation_id}
+              type="button"
+              onClick={() => loadConversation(conv.conversation_id)}
+              dir="rtl"
+              className="w-full text-right px-sm py-xs rounded-xl border border-outline-variant/30 hover:bg-surface-container transition-colors"
+            >
+              <p className="font-label-sm text-label-sm text-on-surface font-medium truncate">
+                {conv.conversation_name || "שיחה ללא שם"}
+              </p>
+              <p className="font-label-sm text-label-sm text-on-surface-variant text-xs mt-0.5">
+                {new Date(conv.created_at).toLocaleDateString("he-IL")} · {conv.message_count} הודעות
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Chat view */}
+      {view === "chat" && <div className="flex-1 overflow-y-auto px-md py-md space-y-xs">
         {messages.map((m, i) => {
           const isLast = i === messages.length - 1;
           const isTyping = sending && isLast && m.role === "assistant" && !m.text;
@@ -216,9 +341,9 @@ export default function TaskAgentChat({ open, onClose }) {
           );
         })}
         <div ref={messagesEndRef} />
-      </div>
+      </div>}
 
-      {file && (
+      {view === "chat" && file && (
         <div className="flex items-center gap-xs mx-md mb-xs px-sm py-1 rounded-lg bg-surface-container font-label-sm text-label-sm text-on-surface-variant w-fit shrink-0">
           <span className="material-symbols-outlined text-sm">attach_file</span>
           <span>{file.name}</span>
@@ -233,7 +358,7 @@ export default function TaskAgentChat({ open, onClose }) {
         </div>
       )}
 
-      <form onSubmit={handleSend} className="flex items-end gap-xs px-md py-sm border-t border-outline-variant/20 shrink-0">
+      {view === "chat" && <form onSubmit={handleSend} className="flex items-end gap-xs px-md py-sm border-t border-outline-variant/20 shrink-0">
         <textarea
           ref={textareaRef}
           dir="rtl"
@@ -281,7 +406,7 @@ export default function TaskAgentChat({ open, onClose }) {
             send
           </span>
         </button>
-      </form>
+      </form>}
     </div>
   );
 }
