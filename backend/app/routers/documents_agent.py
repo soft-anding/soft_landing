@@ -1,6 +1,7 @@
-"""Documents AI agent — a chat endpoint that helps users understand and fill
-out forms and documents relevant to their move. Receives the current category
-and its form list as context so the agent can answer category-specific questions.
+"""Documents AI agent — answers questions about forms and documents needed for
+moving. Fetches the user's profile and their city's full forms list from the
+database on every request so the model always has up-to-date context (which
+city they're moving to, which forms exist, which are already checked).
 """
 from pathlib import Path
 
@@ -9,33 +10,64 @@ from fastapi.responses import StreamingResponse
 from openai import OpenAI, OpenAIError
 
 from ..auth import CurrentUser, get_current_user
+from ..catalog_service import _fetch_user_profile, fetch_forms
 from ..config import settings
 from ..schemas import DocumentsAgentChatRequest
 
 router = APIRouter(prefix="/documents-agent", tags=["documents-agent"])
 
 _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "documents_agent_prompt.txt"
-
 _MAX_REPLY_TOKENS = 600
+
+_CITY_LABELS = {"jerusalem": "ירושלים", "tel_aviv": "תל אביב"}
+
+_LANGUAGE_RULE = (
+    "שפת תשובה: ענה תמיד בעברית בלבד. "
+    "החריג היחיד: אם המשתמש/ת מבקש/ת במפורש לקבל תשובה באנגלית, ענה באנגלית לאותה הודעה בלבד."
+)
 
 
 def _load_system_prompt() -> str:
     try:
         text = _PROMPT_PATH.read_text(encoding="utf-8").strip()
-        print(f"[documents-agent] prompt loaded from {_PROMPT_PATH} ({len(text)} chars)")
+        print(f"[documents-agent] prompt loaded ({len(text)} chars)")
         return text
     except FileNotFoundError:
         print(f"[documents-agent] PROMPT FILE NOT FOUND at {_PROMPT_PATH}")
         return ""
 
 
-def _forms_context(category: str | None, forms: list[str]) -> str:
-    if not category:
-        return ""
+def _profile_context(profile: dict) -> str:
+    city_slug = profile.get("destination_city") or ""
+    city_label = _CITY_LABELS.get(city_slug, city_slug or "לא הוגדרה")
+    parts = [f"עיר יעד: {city_label}"]
+    if profile.get("marital_status"):
+        parts.append(f"מצב משפחתי: {profile['marital_status']}")
+    if profile.get("occupation"):
+        parts.append(f"עיסוק: {profile['occupation']}")
+    return "פרטי המשתמש/ת:\n" + "\n".join(f"- {p}" for p in parts)
+
+
+def _forms_context(forms: list[dict], active_category: str | None) -> str:
     if not forms:
-        return f"הקטגוריה הנוכחית: {category}. אין טפסים ברשימה."
-    items = "\n".join(f"- {f}" for f in forms if f)
-    return f"הקטגוריה הנוכחית: {category}\nהטפסים בקטגוריה זו:\n{items}"
+        return "אין טפסים זמינים לעיר היעד של המשתמש/ת."
+
+    by_cat: dict[str, list[dict]] = {}
+    for f in forms:
+        cat = f.get("category") or "כללי"
+        by_cat.setdefault(cat, []).append(f)
+
+    lines = ["כל הטפסים הזמינים לעיר היעד של המשתמש/ת:"]
+    for cat, items in by_cat.items():
+        marker = " ← קטגוריה פתוחה כרגע" if cat == active_category else ""
+        lines.append(f"\nקטגוריה: {cat}{marker}")
+        for f in items:
+            status = " ✓ (טופל)" if f.get("checked") else ""
+            notes = f" — {f['notes']}" if f.get("notes") else ""
+            link = f"\n    [לטופס/להורדה]({f['file_url']})" if f.get("file_url") else ""
+            lines.append(f"  - {f.get('name') or 'ללא שם'}{notes}{link}{status}")
+
+    return "\n".join(lines)
 
 
 def _create_stream(client: OpenAI, messages: list[dict]):
@@ -66,13 +98,23 @@ def chat(
         raise HTTPException(status_code=503, detail="מפתח ה-API של סוכן המסמכים לא הוגדר בשרת.")
 
     system_prompt = _load_system_prompt()
-    forms_ctx = _forms_context(payload.category, payload.forms)
-    context = "\n\n".join(p for p in [system_prompt, forms_ctx] if p)
+
+    # Profile must come first to get the user's city for the forms query.
+    profile = _fetch_user_profile(user.id)
+    city_slug = profile.get("destination_city") or None
+    forms = fetch_forms(city_slug, user.id)
+
+    context = "\n\n".join(p for p in [
+        _LANGUAGE_RULE,
+        system_prompt,
+        _profile_context(profile),
+        _forms_context(forms, payload.category),
+    ] if p)
 
     messages: list[dict] = [{"role": "system", "content": context}]
     messages += [{"role": m.role, "content": m.content} for m in payload.messages]
 
-    # Attach the image to the last user message as a vision payload.
+    # Attach image to the last user message as a vision payload.
     if payload.image_base64:
         mime = payload.image_mime_type or "image/jpeg"
         for i in range(len(messages) - 1, -1, -1):

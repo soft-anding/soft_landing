@@ -1,6 +1,38 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 
+// Renders plain text with clickable links. Handles:
+//   markdown  [label](https://...)
+//   bare URL  https://...
+// Each \n becomes a <br /> so multi-line agent replies display correctly.
+function renderText(text) {
+  const linkRe = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/\S+)/g;
+  return text.split("\n").map((line, li, arr) => {
+    const parts = [];
+    let last = 0;
+    let m;
+    while ((m = linkRe.exec(line)) !== null) {
+      if (m.index > last) parts.push(line.slice(last, m.index));
+      const href = m[2] || m[3];
+      const label = m[1] || m[3];
+      parts.push(
+        <a key={m.index} href={href} target="_blank" rel="noopener noreferrer"
+           className="text-primary underline break-all">
+          {label}
+        </a>
+      );
+      last = m.index + m[0].length;
+    }
+    if (last < line.length) parts.push(line.slice(last));
+    return (
+      <span key={li}>
+        {parts.length ? parts : line}
+        {li < arr.length - 1 && <br />}
+      </span>
+    );
+  });
+}
+
 async function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -38,15 +70,17 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
     };
   }, [open, onClose]);
 
-  // Reset and greet when the category changes or chat first opens.
+  // Show greeting only when the chat opens with no existing conversation.
+  // Re-opening after X keeps the previous messages intact.
   useEffect(() => {
     if (!open) return;
-    const greeting = category
-      ? `היי! אני כאן כדי לעזור לך עם הטפסים והמסמכים בקטגוריה "${category}". במה אוכל לעזור?`
-      : "היי! אני כאן כדי לעזור לך עם הטפסים והמסמכים. במה אוכל לעזור?";
-    setMessages([{ role: "assistant", text: greeting }]);
-    setInput("");
-    setFile(null);
+    setMessages((prev) => {
+      if (prev.length > 0) return prev;
+      const greeting = category
+        ? `היי! אני כאן כדי לעזור לך עם הטפסים והמסמכים בקטגוריה "${category}". במה אוכל לעזור?`
+        : "היי! אני כאן כדי לעזור לך עם הטפסים והמסמכים. במה אוכל לעזור?";
+      return [{ role: "assistant", text: greeting }];
+    });
   }, [open, category]);
 
   if (!open) return null;
@@ -147,7 +181,7 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
                       : "bg-gray-100 ml-auto"
                   }`}
                 >
-                  {isTyping ? "…" : m.text}
+                  {isTyping ? "…" : renderText(m.text)}
                 </div>
               </div>
             );
