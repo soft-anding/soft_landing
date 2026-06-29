@@ -69,6 +69,12 @@ const realApi = {
   ask: (payload) =>
     request("/ask", { method: "POST", body: payload }),
 
+  getDailyBoard: () => request("/daily-board"),
+  addToDailyBoard: (entries) =>
+    request("/daily-board/items", { method: "POST", body: { entries } }),
+  removeFromDailyBoard: (itemType, itemId) =>
+    request(`/daily-board/items/${itemType}/${itemId}`, { method: "DELETE" }),
+
   // The agent's reply streams in as plain text chunks (not JSON) — onChunk is
   // called with (chunk, fullTextSoFar) as each piece arrives, so the caller
   // can paint the message incrementally instead of waiting for it to finish.

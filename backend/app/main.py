@@ -17,7 +17,7 @@ from .auth import CurrentUser, get_current_user
 from .config import settings
 from .constants import STATUSES
 from .notification_service import TZ, generate_daily_notifications
-from .routers import catalog, documents_agent, health, internal, task_agent, telegram, tracking
+from .routers import catalog, daily_board, documents_agent, health, internal, task_agent, telegram, tracking
 from .telegram_service import poll_updates
 
 scheduler = BackgroundScheduler(timezone=TZ)
@@ -51,6 +51,7 @@ api = APIRouter(prefix="/api")
 api.include_router(health.router)
 api.include_router(catalog.router)
 api.include_router(tracking.router)
+api.include_router(daily_board.router)
 api.include_router(task_agent.router)
 api.include_router(documents_agent.router)
 api.include_router(internal.router)

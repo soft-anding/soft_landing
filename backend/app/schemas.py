@@ -105,3 +105,19 @@ class DocumentsAgentChatRequest(BaseModel):
     forms: list[str] = []
     image_base64: str | None = None
     image_mime_type: str | None = None
+
+
+class DailyBoardKey(BaseModel):
+    item_type: str
+    item_id: int
+    position: int
+    added_at: str
+
+
+class DailyBoardEntry(BaseModel):
+    item_type: Literal["moving_task", "custom_task"]
+    item_id: int
+
+
+class DailyBoardAddRequest(BaseModel):
+    entries: list[DailyBoardEntry]

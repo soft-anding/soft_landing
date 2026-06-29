@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "../components/AppHeader";
 import AddCustomTaskModal from "../components/AddCustomTaskModal";
 import DailyTasksBoard from "../components/DailyTasksBoard";
@@ -362,28 +362,74 @@ export default function Dashboard() {
   const [savingId,     setSavingId]     = useState(null);
   const [showAddTask,  setShowAddTask]  = useState(false);
 
-  const DAILY_KEY = `daily_board:${userProfile?.id ?? "guest"}`;
-  const [pinnedIds, setPinnedIds] = useState(
-    () => new Set(JSON.parse(localStorage.getItem(`daily_board:${userProfile?.id ?? "guest"}`) ?? "[]"))
-  );
+  // Ordered array of "item_type:item_id" strings — source of truth for the daily board.
+  // Order matches the `position` column in user_daily_board (agent-suggested order preserved).
+  const [pinnedKeys, setPinnedKeys] = useState([]);
+  // Derived Set for O(1) lookup in TaskCard pin-button rendering.
+  const pinnedIds = useMemo(() => new Set(pinnedKeys), [pinnedKeys]);
 
-  function handlePin(item) {
-    setPinnedIds((prev) => {
-      const next = new Set(prev);
-      next.add(`${item.item_type}:${item.item_id}`);
-      localStorage.setItem(DAILY_KEY, JSON.stringify([...next]));
-      return next;
-    });
+  // Fetch the daily board from the DB on mount.
+  useEffect(() => {
+    api.getDailyBoard()
+      .then((rows) => setPinnedKeys(rows.map((r) => `${r.item_type}:${r.item_id}`)))
+      .catch(() => {});
+  }, []);
+
+  async function handlePin(item) {
+    const key = `${item.item_type}:${item.item_id}`;
+    if (pinnedIds.has(key)) return;
+    // Optimistic update.
+    setPinnedKeys((prev) => [...prev, key]);
+    try {
+      const rows = await api.addToDailyBoard([
+        { item_type: item.item_type, item_id: item.item_id },
+      ]);
+      setPinnedKeys(rows.map((r) => `${r.item_type}:${r.item_id}`));
+    } catch {
+      // Roll back optimistic update on failure.
+      setPinnedKeys((prev) => prev.filter((k) => k !== key));
+    }
   }
 
-  function handleUnpin(itemKey) {
-    setPinnedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(itemKey);
-      localStorage.setItem(DAILY_KEY, JSON.stringify([...next]));
-      return next;
-    });
+  async function handleUnpin(itemKey) {
+    const [itemType, itemIdStr] = itemKey.split(":");
+    // Optimistic update.
+    setPinnedKeys((prev) => prev.filter((k) => k !== itemKey));
+    try {
+      await api.removeFromDailyBoard(itemType, parseInt(itemIdStr, 10));
+    } catch {
+      // Roll back on failure.
+      setPinnedKeys((prev) => [...prev, itemKey]);
+    }
   }
+
+  // Keep a ref to handlePin so the event listener below never goes stale.
+  const handlePinRef = useRef(handlePin);
+  useEffect(() => { handlePinRef.current = handlePin; });
+
+  // Listen for daily-board-pin events dispatched by TaskAgentChat when the
+  // user confirms the agent's daily task suggestions.
+  useEffect(() => {
+    async function onDailyBoardPin(e) {
+      const suggested = e.detail?.tasks ?? [];
+      if (!suggested.length) return;
+      // Optimistic update — add keys not already present, in agent order.
+      const newKeys = suggested
+        .map((t) => `${t.item_type}:${t.item_id}`)
+        .filter((k) => !pinnedIds.has(k));
+      if (newKeys.length) {
+        setPinnedKeys((prev) => [...prev, ...newKeys]);
+      }
+      try {
+        const rows = await api.addToDailyBoard(suggested);
+        setPinnedKeys(rows.map((r) => `${r.item_type}:${r.item_id}`));
+      } catch {
+        setPinnedKeys((prev) => prev.filter((k) => !newKeys.includes(k)));
+      }
+    }
+    window.addEventListener("daily-board-pin", onDailyBoardPin);
+    return () => window.removeEventListener("daily-board-pin", onDailyBoardPin);
+  }, [pinnedIds]);
 
   useEffect(() => {
     let alive = true;
@@ -544,7 +590,7 @@ export default function Dashboard() {
             <div className="w-72 shrink-0 sticky top-32 h-[calc(100vh-9rem)]">
               <DailyTasksBoard
                 tasks={tasks}
-                pinnedIds={pinnedIds}
+                pinnedKeys={pinnedKeys}
                 onRemove={handleUnpin}
                 onStatusChange={handleStatusChange}
               />

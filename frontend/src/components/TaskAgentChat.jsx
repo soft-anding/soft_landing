@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 
-// Floating launcher button that opens the chat — fixed in the same corner the
-// chat panel itself opens from, so it reads as "tap here to open this panel."
 export function TaskAgentFab({ onClick }) {
   return (
     <button
@@ -18,19 +16,29 @@ export function TaskAgentFab({ onClick }) {
   );
 }
 
-// Frontend shell for the upcoming task-AI agent. No backend wired yet —
-// sending a message just appends it locally. Once the agent backend exists,
-// replace handleSend's TODO with the real API call (including uploading `file`).
-// Rendered as a small floating widget (not a full-height drawer) so it doesn't
-// take over the screen like the task/info side panels do.
 const GREETING =
   "היי! אני העוזר האישי שלך למעבר. אני כאן כדי לעזור לך לעשות סדר במשימות, להבין מה דחוף ומה אפשר לדחות, ולענות על כל שאלה לגבי התהליך. במה אפשר לעזור?";
+
+// Extract [SUGGEST_DAILY:{...}] from text and return { clean, suggestion }.
+// Returns { clean: originalText, suggestion: null } if no annotation found.
+function parseSuggestion(text) {
+  const match = text.match(/\[SUGGEST_DAILY:(\{.*?\})\]/s);
+  if (!match) return { clean: text, suggestion: null };
+  try {
+    const suggestion = JSON.parse(match[1]);
+    const clean = text.replace(match[0], "").trimEnd();
+    return { clean, suggestion };
+  } catch {
+    return { clean: text, suggestion: null };
+  }
+}
 
 export default function TaskAgentChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
   const [sending, setSending] = useState(false);
+  const [pendingSuggestion, setPendingSuggestion] = useState(null);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
   const textareaRef = useRef(null);
@@ -38,7 +46,7 @@ export default function TaskAgentChat({ open, onClose }) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: "end" });
-  }, [messages, sending]);
+  }, [messages, sending, pendingSuggestion]);
 
   useEffect(() => {
     if (!open) return;
@@ -54,7 +62,6 @@ export default function TaskAgentChat({ open, onClose }) {
     };
   }, [open, onClose]);
 
-  // Greet the user automatically the first time the chat opens, before they type anything.
   useEffect(() => {
     if (open && messages.length === 0) {
       setMessages([{ role: "assistant", text: GREETING }]);
@@ -62,6 +69,14 @@ export default function TaskAgentChat({ open, onClose }) {
   }, [open, messages.length]);
 
   if (!open) return null;
+
+  function handleConfirmSuggestion() {
+    if (!pendingSuggestion) return;
+    window.dispatchEvent(
+      new CustomEvent("daily-board-pin", { detail: { tasks: pendingSuggestion.tasks } })
+    );
+    setPendingSuggestion(null);
+  }
 
   async function handleSend(e) {
     e.preventDefault();
@@ -72,10 +87,9 @@ export default function TaskAgentChat({ open, onClose }) {
     setMessages(nextMessages);
     setInput("");
     setFile(null);
+    setPendingSuggestion(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setSending(true);
-    // Placeholder bubble that fills in as the reply streams, instead of
-    // appearing all at once once the whole reply is ready.
     setMessages((prev) => [...prev, { role: "assistant", text: "" }]);
     try {
       await api.streamTaskAgentChat(
@@ -88,8 +102,17 @@ export default function TaskAgentChat({ open, onClose }) {
           });
         }
       );
-      // The agent may have changed/added a task server-side — tell the
-      // Dashboard (if mounted) to refetch instead of showing stale counts.
+      // Stream finished — parse suggestion annotation from the completed message.
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last.role !== "assistant" || !last.text) return prev;
+        const { clean, suggestion } = parseSuggestion(last.text);
+        if (suggestion) {
+          setPendingSuggestion(suggestion);
+          return [...prev.slice(0, -1), { ...last, text: clean }];
+        }
+        return prev;
+      });
       window.dispatchEvent(new Event("tasks-changed"));
     } catch {
       setMessages((prev) => {
@@ -106,8 +129,8 @@ export default function TaskAgentChat({ open, onClose }) {
   }
 
   function handleEndConversation() {
-    // TODO: notify the backend the session ended, once it exists.
     setMessages([]);
+    setPendingSuggestion(null);
     onClose();
   }
 
@@ -144,12 +167,14 @@ export default function TaskAgentChat({ open, onClose }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-md py-md space-y-xs">
-        {messages.length > 0 && (
-          messages.map((m, i) => {
-            const isLast = i === messages.length - 1;
-            const isTyping = sending && isLast && m.role === "assistant" && !m.text;
-            return (
-              <div key={i} className="flex">
+        {messages.map((m, i) => {
+          const isLast = i === messages.length - 1;
+          const isTyping = sending && isLast && m.role === "assistant" && !m.text;
+          const showSuggestion = pendingSuggestion && isLast && m.role === "assistant" && !sending;
+
+          return (
+            <div key={i}>
+              <div className="flex">
                 <div
                   dir="rtl"
                   className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed text-black text-right break-words ${
@@ -161,9 +186,35 @@ export default function TaskAgentChat({ open, onClose }) {
                   {isTyping ? "…" : m.text}
                 </div>
               </div>
-            );
-          })
-        )}
+
+              {/* Daily board suggestion confirmation card */}
+              {showSuggestion && (
+                <div className="flex justify-end mt-xs">
+                  <div className="bg-primary-container/20 border border-primary/25 rounded-xl px-sm py-sm flex items-center gap-sm max-w-[80%]">
+                    <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: "1.1rem" }}>
+                      event_note
+                    </span>
+                    <span className="font-label-sm text-label-sm text-on-surface flex-1">
+                      להוסיף ללוח היומי?
+                    </span>
+                    <button
+                      onClick={() => setPendingSuggestion(null)}
+                      className="font-label-sm text-label-sm text-on-surface-variant hover:text-error transition-colors shrink-0"
+                    >
+                      לא
+                    </button>
+                    <button
+                      onClick={handleConfirmSuggestion}
+                      className="font-label-sm text-label-sm text-white bg-primary hover:bg-primary/90 transition-colors rounded-lg px-sm py-xs shrink-0"
+                    >
+                      כן, הוסף
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
@@ -204,7 +255,6 @@ export default function TaskAgentChat({ open, onClose }) {
           className="flex-1 px-md py-1.5 rounded-xl border border-outline-variant text-xs text-right text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none overflow-y-auto leading-snug [&::-webkit-scrollbar]:hidden"
         />
 
-        {/* Attach image/file */}
         <input
           ref={fileInputRef}
           type="file"

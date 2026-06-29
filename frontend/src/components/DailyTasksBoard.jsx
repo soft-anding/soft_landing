@@ -1,7 +1,11 @@
 import { useState } from "react";
 
-export default function DailyTasksBoard({ tasks, pinnedIds, onRemove, onStatusChange }) {
-  const pinned = tasks.filter((t) => pinnedIds.has(`${t.item_type}:${t.item_id}`));
+export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusChange }) {
+  // Build a lookup map so we can render in the agent-suggested position order.
+  const taskMap = Object.fromEntries(
+    tasks.map((t) => [`${t.item_type}:${t.item_id}`, t])
+  );
+  const pinned = pinnedKeys.map((k) => taskMap[k]).filter(Boolean);
   const [openKey, setOpenKey] = useState(null);
 
   function toggleSteps(key) {
