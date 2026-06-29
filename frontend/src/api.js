@@ -114,9 +114,13 @@ const realApi = {
 
   saveTaskAgentConversation: (messages) =>
     request("/task-agent/save-conversation", { method: "POST", body: { messages } }),
+  getTaskAgentConversations: () => request("/task-agent/conversations"),
+  getTaskAgentConversation: (id) => request(`/task-agent/conversations/${id}`),
 
   saveDocumentsAgentConversation: (messages) =>
     request("/documents-agent/save-conversation", { method: "POST", body: { messages } }),
+  getDocumentsAgentConversations: () => request("/documents-agent/conversations"),
+  getDocumentsAgentConversation: (id) => request(`/documents-agent/conversations/${id}`),
 
   streamDocumentsAgentChat: async (messages, category, forms, imageBase64, imageMimeType, onChunk) => {
     const headers = { ...(await authHeader()), "Content-Type": "application/json" };

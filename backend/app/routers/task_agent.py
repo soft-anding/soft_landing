@@ -327,10 +327,7 @@ def save_conversation(
     client = OpenAI(api_key=settings.tasks_agent_openai_api_key)
     name = _generate_conversation_name(client, payload.messages)
     conv_id = str(uuid.uuid4())
-    messages_data = json.dumps(
-        [{"role": m.role, "content": m.content} for m in payload.messages],
-        ensure_ascii=False,
-    )
+    messages_data = [{"role": m.role, "content": m.content} for m in payload.messages]
     try:
         get_supabase().table("tasks_agent_conversations").insert({
             "conversation_id": conv_id,
@@ -343,6 +340,42 @@ def save_conversation(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"שגיאה בשמירת השיחה: {exc}") from exc
     return {"conversation_id": conv_id, "conversation_name": name}
+
+
+@router.get("/conversations")
+def list_conversations(user: CurrentUser = Depends(get_current_user)) -> list[dict]:
+    result = (
+        get_supabase()
+        .table("tasks_agent_conversations")
+        .select("conversation_id, conversation_name, message_count, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return result.data or []
+
+
+@router.get("/conversations/{conversation_id}")
+def get_conversation(
+    conversation_id: str,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
+    result = (
+        get_supabase()
+        .table("tasks_agent_conversations")
+        .select("conversation_id, conversation_name, messages, created_at")
+        .eq("conversation_id", conversation_id)
+        .eq("user_id", user.id)
+        .single()
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="שיחה לא נמצאה.")
+    row = result.data
+    msgs = row["messages"]
+    if isinstance(msgs, str):
+        msgs = json.loads(msgs)
+    return {"conversation_id": row["conversation_id"], "conversation_name": row["conversation_name"], "messages": msgs}
 
 
 @router.post("/chat")
