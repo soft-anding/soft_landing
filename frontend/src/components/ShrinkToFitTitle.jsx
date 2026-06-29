@@ -30,7 +30,7 @@ export default function ShrinkToFitTitle({
     <Tag
       ref={ref}
       className={className}
-      style={{ lineHeight: `${lineHeight}px`, height: `${lineHeight * lines}px`, overflow: "hidden" }}
+      style={{ lineHeight: `${lineHeight}px`, height: `${lineHeight * lines}px`, overflow: "hidden", overflowWrap: "break-word" }}
     >
       {text}
     </Tag>

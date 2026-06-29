@@ -153,8 +153,33 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
 
   if (onCollapse) {
     return (
-      <div className="bg-white rounded-2xl border-2 border-primary/40 soft-shadow flex flex-col items-center gap-md p-lg w-full text-center">
-        {inner}
+      <div className="bg-white rounded-xl border-2 border-primary/40 soft-shadow flex items-center gap-md px-md py-sm w-full">
+        <button
+          onClick={onCollapse}
+          className="shrink-0 flex items-center text-primary hover:bg-primary-container/20 rounded-full p-xs transition-colors"
+          title="חזור לכל הקטגוריות"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: "1.1rem", lineHeight: 1 }}>
+            close
+          </span>
+        </button>
+        <div className="relative shrink-0" style={{ width: 52, height: 52 }}>
+          <DonutChart percentage={pct} size={52} />
+          <span
+            className="absolute inset-0 flex items-center justify-center font-semibold text-primary"
+            style={{ fontSize: "0.72rem" }}
+          >
+            {pct}%
+          </span>
+        </div>
+        <div className="flex flex-col text-right min-w-0">
+          <span className="font-headline-sm text-headline-sm text-on-surface leading-tight">
+            {summary.label}
+          </span>
+          <span className="font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">
+            {summary.completed} מתוך {summary.total} משימות
+          </span>
+        </div>
       </div>
     );
   }
@@ -199,17 +224,23 @@ function sortByUrgency(tasks) {
 function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAddTask, pinnedIds, onPin, onUnpin }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [urgencySort, setUrgencySort] = useState(false);
+  const wrapperRef = useRef(null);
 
-  // Re-derive summaries live from tasks so counts update when a task status changes.
+  function fadeTransition(callback) {
+    const el = wrapperRef.current;
+    if (!el) { callback(); return; }
+    el.style.opacity = "0";
+    setTimeout(() => {
+      callback();
+      requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = "1"; }));
+    }, 280);
+  }
+
   const summaries = getCategorySummaries(tasks);
-
-  // Always look up the pinned summary from the current summaries array so the
-  // donut chart and counts refresh after a status change without re-clicking.
   const pinnedSummary = expandedCategory
     ? (summaries.find((s) => s.category === expandedCategory.category) ?? expandedCategory)
     : null;
 
-  // ── Controls row — always visible ────────────────────────────────────────
   const controls = (
     <div className="flex items-center justify-between gap-md flex-wrap">
       <button
@@ -220,7 +251,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
         הוסף משימה אישית
       </button>
       <button
-        onClick={() => { setUrgencySort((v) => !v); setExpandedCategory(null); }}
+        onClick={() => fadeTransition(() => { setUrgencySort((v) => !v); setExpandedCategory(null); })}
         className={`flex items-center gap-xs px-md py-sm rounded-lg border font-label-sm text-label-sm transition-all shrink-0
           ${urgencySort
             ? "bg-green-50 text-green-700 border-green-600/60 font-semibold"
@@ -232,23 +263,21 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
     </div>
   );
 
-  if (!summaries.length) {
-    return (
-      <div className="space-y-lg">
-        {controls}
+  // stateKey drives AnimatePresence — changes whenever the visible content changes
+  const stateKey = urgencySort ? "urgency" : expandedCategory ? `cat-${expandedCategory.category}` : "overview";
+
+  function renderContent() {
+    if (!summaries.length) {
+      return (
         <p className="font-body-md text-body-md text-on-surface-variant text-right">
           עדיין אין משימות מעבר — נחזור בקרוב.
         </p>
-      </div>
-    );
-  }
+      );
+    }
 
-  // ── Urgency sort view — flat sorted list ─────────────────────────────────
-  if (urgencySort) {
-    const sorted = sortByUrgency(tasks);
-    return (
-      <div className="space-y-lg">
-        {controls}
+    if (urgencySort) {
+      const sorted = sortByUrgency(tasks);
+      return (
         <div className="flex flex-col gap-md">
           {sorted.map((item) => {
             const id = `${item.item_type}:${item.item_id}`;
@@ -266,79 +295,75 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
             );
           })}
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  // ── State 2: expanded single-category view ───────────────────────────────
-  if (expandedCategory) {
-    const catKey = expandedCategory.category;
-    const catTasks = tasks.filter((t) => (t.category || "other") === catKey);
-    const otherSummaries = summaries.filter((s) => s.category !== catKey);
+    if (expandedCategory) {
+      const catKey = expandedCategory.category;
+      const catTasks = tasks.filter((t) => (t.category || "other") === catKey);
+      const otherSummaries = summaries.filter((s) => s.category !== catKey);
+      return (
+        <>
+          <CategorySummaryBox
+            summary={pinnedSummary}
+            onCollapse={() => fadeTransition(() => setExpandedCategory(null))}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start mt-lg">
+            {catTasks.map((item) => {
+              const id = `${item.item_type}:${item.item_id}`;
+              return (
+                <TaskCard
+                  key={id}
+                  item={item}
+                  saving={savingId === id}
+                  onStatusChange={onStatusChange}
+                  onDeadlineChange={onDeadlineChange}
+                  isPinned={pinnedIds?.has(id)}
+                  onPin={onPin}
+                  onUnpin={onUnpin}
+                />
+              );
+            })}
+          </div>
+          {otherSummaries.length > 0 && (
+            <div>
+              <p className="font-label-sm text-label-sm text-on-surface-variant mb-sm text-right">
+                קטגוריות נוספות
+              </p>
+              <div className={`grid ${gridColsClass(otherSummaries.length)} gap-sm`}>
+                {otherSummaries.map((s) => (
+                  <CategorySummaryBox
+                    key={s.category}
+                    summary={s}
+                    compact
+                    onClick={() => fadeTransition(() => setExpandedCategory(s))}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
 
     return (
-      <div className="space-y-lg">
-        {controls}
-
-        {/* Pinned category box — same visual as overview boxes, with collapse chevron */}
-        <CategorySummaryBox
-          summary={pinnedSummary}
-          onCollapse={() => setExpandedCategory(null)}
-        />
-
-        {/* Task list for the selected category — reuses existing TaskCard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start">
-          {catTasks.map((item) => {
-            const id = `${item.item_type}:${item.item_id}`;
-            return (
-              <TaskCard
-                key={id}
-                item={item}
-                saving={savingId === id}
-                onStatusChange={onStatusChange}
-                onDeadlineChange={onDeadlineChange}
-                isPinned={pinnedIds?.has(id)}
-                onPin={onPin}
-                onUnpin={onUnpin}
-              />
-            );
-          })}
-        </div>
-
-        {/* Remaining categories — compact clickable row to switch category */}
-        {otherSummaries.length > 0 && (
-          <div>
-            <p className="font-label-sm text-label-sm text-on-surface-variant mb-sm text-right">
-              קטגוריות נוספות
-            </p>
-            <div className={`grid ${gridColsClass(otherSummaries.length)} gap-sm`}>
-              {otherSummaries.map((s) => (
-                <CategorySummaryBox
-                  key={s.category}
-                  summary={s}
-                  compact
-                  onClick={() => setExpandedCategory(s)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ── State 1: overview grid ────────────────────────────────────────────────
-  return (
-    <div className="space-y-lg">
-      {controls}
       <div className={`grid ${gridColsClass(summaries.length)} gap-md`}>
         {summaries.map((s) => (
           <CategorySummaryBox
             key={s.category}
             summary={s}
-            onClick={() => setExpandedCategory(s)}
+            onClick={() => fadeTransition(() => setExpandedCategory(s))}
           />
         ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-lg">
+      {controls}
+      <div ref={wrapperRef} style={{ transition: "opacity 0.28s ease" }}>
+        {renderContent()}
       </div>
     </div>
   );

@@ -31,6 +31,8 @@ body {
   100% { transform: translateY(0px); }
 }
 
+/* Category expand animation */
+
 /* Pill input focus glow */
 .input-pill:focus {
   outline: none;
