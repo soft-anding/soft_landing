@@ -21,7 +21,7 @@ from .supabase_client import get_supabase
 logger = logging.getLogger(__name__)
 
 _API_BASE = "https://api.telegram.org"
-_LINK_CONFIRMATION = "מחובר בהצלחה! מעכשיו תקבלו כאן גם את ההתראות מהמערכת."
+_LINK_CONFIRMATION = "מחובר בהצלחה! מעכשיו תקבלו כאן גם את ההתראות מהמערכת, ותוכלו להתייעץ ולהיעזר בי בכל שלב במעבר דירה!"
 _NOT_LINKED = "החשבון שלך עדיין לא מקושר. כדי לדבר איתי כאן, קשרו את הטלגרם דרך הפרופיל באפליקציה."
 _AGENT_ERROR = "מצטערים, הייתה שגיאה בפנייה לסוכן. נסו שוב בעוד רגע."
 

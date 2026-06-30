@@ -3,6 +3,7 @@
 Serves the JSON API under /api and, in production, the built React SPA from
 frontend/dist at the root (so a single Railway service hosts both).
 """
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -31,7 +32,11 @@ async def lifespan(_app: FastAPI):
         CronTrigger(hour=8, minute=0, timezone=TZ),
         id="daily_notifications",
     )
-    if settings.telegram_bot_token:
+    # RAILWAY_ENVIRONMENT is injected only on actual Railway deploys — gating on
+    # it (not just the token) stops the poller from double-running if someone's
+    # local .env happens to have the real bot token, which causes every Telegram
+    # message to get answered twice (once per process) with different wording.
+    if settings.telegram_bot_token and os.environ.get("RAILWAY_ENVIRONMENT"):
         scheduler.add_job(poll_updates, IntervalTrigger(seconds=10), id="telegram_poll")
     scheduler.start()
     yield
