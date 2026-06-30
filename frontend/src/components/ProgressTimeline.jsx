@@ -46,7 +46,7 @@ export default function ProgressTimeline({
                          `יש לך עוד ${daysLeft} ימים עד המעבר${cityLabel ? ` ל${cityLabel}` : ""}`;
 
   return (
-    <section className="mb-lg w-full">
+    <section className="mb-8 w-full">
       <div className="bg-white rounded-xl px-lg pt-sm pb-xs shadow-sm">
 
         {/* Compact one-line header */}

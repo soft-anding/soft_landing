@@ -351,7 +351,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
   }
 
   return (
-    <div className="space-y-lg">
+    <div className="space-y-sm">
       {controls}
       <div ref={wrapperRef} style={{ transition: "opacity 0.28s ease" }}>
         {renderContent()}
@@ -558,7 +558,7 @@ export default function Dashboard() {
       )}
       <main className="pt-32 pb-xl px-gutter max-w-container-max mx-auto">
 
-        <section className="mb-lg text-right">
+        <section className="mb-8 text-right">
           {fullName && (
             <p className="font-headline-lg text-headline-lg text-on-surface-variant text-center mb-md">
               <span>היי,</span>
@@ -581,49 +581,51 @@ export default function Dashboard() {
         )}
 
         {!loading && !error && (
-          <div className="flex gap-lg items-start">
-            {/* Right column — main content */}
-            <div className="flex-1 min-w-0">
-              <ProgressTimeline
-                moveDate={moveDate}
-                destinationCity={destinationCity}
-                completed={progress?.completed ?? 0}
-                total={progress?.total ?? 0}
-                byStatus={progress?.by_status ?? {}}
-              />
+          <>
+            <ProgressTimeline
+              moveDate={moveDate}
+              destinationCity={destinationCity}
+              completed={progress?.completed ?? 0}
+              total={progress?.total ?? 0}
+              byStatus={progress?.by_status ?? {}}
+            />
 
-              <section className="mb-xl">
-                <div className="mb-md">
-                  <h2 className="font-headline-md text-headline-md text-on-surface">
-                    משימות לקראת המעבר
-                  </h2>
-                  <span className="font-label-md text-label-md text-on-surface-variant">
-                    {progress ? `${progress.completed} מתוך ${progress.total} משימות הושלמו` : ""}
-                  </span>
-                </div>
-                <TasksSection
+            <div className="flex gap-lg items-start mt-8">
+              {/* Right column — main content */}
+              <div className="flex-1 min-w-0">
+                <section className="mb-xl">
+                  <div className="mb-sm">
+                    <h2 className="font-headline-md text-headline-md text-on-surface">
+                      משימות לקראת המעבר
+                    </h2>
+                    <span className="font-label-md text-label-md text-on-surface-variant">
+                      {progress ? `${progress.completed} מתוך ${progress.total} משימות הושלמו` : ""}
+                    </span>
+                  </div>
+                  <TasksSection
+                    tasks={tasks}
+                    onStatusChange={handleStatusChange}
+                    onDeadlineChange={handleDeadlineChange}
+                    savingId={savingId}
+                    onAddTask={() => setShowAddTask(true)}
+                    pinnedIds={pinnedIds}
+                    onPin={handlePin}
+                    onUnpin={handleUnpin}
+                  />
+                </section>
+              </div>
+
+              {/* Left column — daily board */}
+              <div className="w-72 shrink-0 h-[544px] mt-sm">
+                <DailyTasksBoard
                   tasks={tasks}
+                  pinnedKeys={pinnedKeys}
+                  onRemove={handleUnpin}
                   onStatusChange={handleStatusChange}
-                  onDeadlineChange={handleDeadlineChange}
-                  savingId={savingId}
-                  onAddTask={() => setShowAddTask(true)}
-                  pinnedIds={pinnedIds}
-                  onPin={handlePin}
-                  onUnpin={handleUnpin}
                 />
-              </section>
+              </div>
             </div>
-
-            {/* Left column — daily board (sticky, fixed viewport height) */}
-            <div className="w-72 shrink-0 sticky top-32 h-[calc(100vh-9rem)]">
-              <DailyTasksBoard
-                tasks={tasks}
-                pinnedKeys={pinnedKeys}
-                onRemove={handleUnpin}
-                onStatusChange={handleStatusChange}
-              />
-            </div>
-          </div>
+          </>
         )}
       </main>
     </div>
