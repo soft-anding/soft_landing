@@ -245,6 +245,13 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
           "application/json",
           JSON.stringify({ type: "task", item_type: item.item_type, item_id: item.item_id })
         );
+        const el = e.currentTarget;
+        const rect = el.getBoundingClientRect();
+        const clone = el.cloneNode(true);
+        clone.style.cssText = `position:fixed;top:0;left:-${rect.width + 20}px;width:${rect.width}px;height:${rect.height}px;margin:0;transform:none;opacity:0.9;pointer-events:none;`;
+        document.body.appendChild(clone);
+        e.dataTransfer.setDragImage(clone, e.clientX - rect.left, e.clientY - rect.top);
+        requestAnimationFrame(() => clone.remove());
       }}
       className={`group bg-white rounded-2xl border soft-shadow flex flex-col h-full transition-all duration-200 ${
         done ? "border-primary/40" : "border-outline-variant/30"

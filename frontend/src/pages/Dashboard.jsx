@@ -9,7 +9,7 @@ import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
 import { dashboardCacheKey, readDashboardCache, writeDashboardCache } from "../dashboardCache";
 import { readDailyBoardCache, writeDailyBoardCache } from "../dailyBoardCache";
-import { STATUSES } from "../statusConfig";
+import { STATUSES, STATUS_ICON, statusStyle } from "../statusConfig";
 
 // ── Derive per-category totals + completion counts from the tasks array ───────
 function getCategorySummaries(tasks) {
@@ -206,12 +206,22 @@ function sortByUrgency(tasks) {
 function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAddTask, pinnedIds, onPin, onUnpin }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [urgencySort, setUrgencySort] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(null);
   const wrapperRef = useRef(null);
   const expandedHeaderRef = useRef(null);
+  const savedScrollRef = useRef(0);
+
+  // Count tasks per status for the filter chips
+  const statusCounts = {};
+  for (const t of tasks) statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
 
   function fadeTransition(callback) {
     const el = wrapperRef.current;
     if (!el) { callback(); return; }
+    // Save scroll only from the base overview state
+    if (!expandedCategory && !urgencySort && !statusFilter) {
+      savedScrollRef.current = window.scrollY;
+    }
     el.style.opacity = "0";
     setTimeout(() => {
       callback();
@@ -220,7 +230,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
           const top = expandedHeaderRef.current.getBoundingClientRect().top + window.scrollY - 136;
           window.scrollTo({ top, behavior: "instant" });
         } else {
-          window.scrollTo(0, 0);
+          window.scrollTo({ top: savedScrollRef.current, behavior: "instant" });
         }
         requestAnimationFrame(() => { el.style.opacity = "1"; });
       });
@@ -233,29 +243,64 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
     : null;
 
   const controls = (
-    <div className="flex items-center justify-between gap-md flex-wrap">
-      <button
-        onClick={onAddTask}
-        className="flex items-center gap-xs px-md py-sm rounded-lg border border-green-600/30 text-green-700 font-label-sm text-label-sm hover:border-green-600/60 hover:bg-green-50 transition-colors shrink-0"
-      >
-        <span className="material-symbols-outlined text-sm">add_circle</span>
-        הוסף משימה אישית
-      </button>
-      <button
-        onClick={() => fadeTransition(() => { setUrgencySort((v) => !v); setExpandedCategory(null); })}
-        className={`flex items-center gap-xs px-md py-sm rounded-lg border font-label-sm text-label-sm transition-all shrink-0
-          ${urgencySort
-            ? "bg-green-50 text-green-700 border-green-600/60 font-semibold"
-            : "text-on-surface-variant border-green-600/30 hover:text-green-700 hover:border-green-600/60"}`}
-      >
-        <span className="material-symbols-outlined text-sm">{urgencySort ? "grid_view" : "sort"}</span>
-        {urgencySort ? "חזרה לתצוגת קטגוריות" : "מיין לפי דחיפות"}
-      </button>
+    <div className="flex flex-col gap-sm">
+      <div className="flex items-center justify-between gap-md flex-wrap">
+        <button
+          onClick={onAddTask}
+          className="flex items-center gap-xs px-md py-sm rounded-lg border border-green-600/30 text-green-700 font-label-sm text-label-sm hover:border-green-600/60 hover:bg-green-50 transition-colors shrink-0"
+        >
+          <span className="material-symbols-outlined text-sm">add_circle</span>
+          הוסף משימה אישית
+        </button>
+        <button
+          onClick={() => fadeTransition(() => { setUrgencySort((v) => !v); setExpandedCategory(null); setStatusFilter(null); })}
+          className={`flex items-center gap-xs px-md py-sm rounded-lg border font-label-sm text-label-sm transition-all shrink-0
+            ${urgencySort
+              ? "bg-green-50 text-green-700 border-green-600/60 font-semibold"
+              : "text-on-surface-variant border-green-600/30 hover:text-green-700 hover:border-green-600/60"}`}
+        >
+          <span className="material-symbols-outlined text-sm">{urgencySort ? "grid_view" : "sort"}</span>
+          {urgencySort ? "חזרה לתצוגת קטגוריות" : "מיין לפי דחיפות"}
+        </button>
+      </div>
+
+      {/* Status filter chips */}
+      <div className="flex items-center gap-xs flex-wrap" dir="rtl">
+        {STATUSES.filter((s) => statusCounts[s] > 0).map((s) => {
+          const active = statusFilter === s;
+          return (
+            <button
+              key={s}
+              onClick={() => fadeTransition(() => {
+                setStatusFilter(active ? null : s);
+                setExpandedCategory(null);
+                setUrgencySort(false);
+              })}
+              className={`flex items-center gap-xs px-sm py-xs rounded-full border font-label-sm text-label-sm transition-all ${
+                active
+                  ? statusStyle(s) + " font-semibold shadow-sm"
+                  : "border-outline-variant/40 text-on-surface-variant hover:border-primary/40 hover:text-on-surface"
+              }`}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: "0.9rem", lineHeight: 1, fontVariationSettings: s === "הושלם" ? "'FILL' 1" : "'FILL' 0" }}
+              >
+                {STATUS_ICON[s]}
+              </span>
+              {s}
+              <span className={`text-xs tabular-nums ${active ? "opacity-80" : "opacity-50"}`}>
+                {statusCounts[s]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 
-  // stateKey drives AnimatePresence — changes whenever the visible content changes
-  const stateKey = urgencySort ? "urgency" : expandedCategory ? `cat-${expandedCategory.category}` : "overview";
+  // stateKey changes whenever the visible content changes
+  const stateKey = urgencySort ? "urgency" : statusFilter ? `status-${statusFilter}` : expandedCategory ? `cat-${expandedCategory.category}` : "overview";
 
   function renderContent() {
     if (!summaries.length) {
@@ -285,6 +330,56 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
               />
             );
           })}
+        </div>
+      );
+    }
+
+    if (statusFilter) {
+      const filtered = tasks.filter((t) => t.status === statusFilter);
+      if (!filtered.length) {
+        return (
+          <p className="font-body-md text-body-md text-on-surface-variant text-right">
+            אין משימות עם סטטוס זה.
+          </p>
+        );
+      }
+      // Group by category, preserving first-appearance order
+      const groups = [];
+      const groupMap = {};
+      for (const item of filtered) {
+        const cat = item.category || "other";
+        const label = item.category_label || "אחר";
+        if (!groupMap[cat]) { groupMap[cat] = { cat, label, items: [] }; groups.push(groupMap[cat]); }
+        groupMap[cat].items.push(item);
+      }
+      return (
+        <div className="flex flex-col gap-xl">
+          {groups.map(({ cat, label, items }) => (
+            <div key={cat}>
+              <div className="flex items-center gap-xs mb-md">
+                <div className="flex-1 h-px bg-outline-variant/20" />
+                <span className="font-label-sm text-label-sm text-on-surface-variant/60 shrink-0">{label}</span>
+                <div className="flex-1 h-px bg-outline-variant/20" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+                {items.map((item) => {
+                  const id = `${item.item_type}:${item.item_id}`;
+                  return (
+                    <TaskCard
+                      key={id}
+                      item={item}
+                      saving={savingId === id}
+                      onStatusChange={onStatusChange}
+                      onDeadlineChange={onDeadlineChange}
+                      isPinned={pinnedIds?.has(id)}
+                      onPin={onPin}
+                      onUnpin={onUnpin}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       );
     }
@@ -333,6 +428,13 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
                     onDragStart={(e) => {
                       e.dataTransfer.effectAllowed = "copy";
                       e.dataTransfer.setData("application/json", JSON.stringify({ type: "category", category: s.category }));
+                      const el = e.currentTarget;
+                      const rect = el.getBoundingClientRect();
+                      const clone = el.cloneNode(true);
+                      clone.style.cssText = `position:fixed;top:0;left:-${rect.width + 20}px;width:${rect.width}px;height:${rect.height}px;margin:0;transform:none;opacity:0.9;pointer-events:none;`;
+                      document.body.appendChild(clone);
+                      e.dataTransfer.setDragImage(clone, e.clientX - rect.left, e.clientY - rect.top);
+                      requestAnimationFrame(() => clone.remove());
                     }}
                   />
                 ))}
@@ -353,6 +455,13 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
             onDragStart={(e) => {
               e.dataTransfer.effectAllowed = "copy";
               e.dataTransfer.setData("application/json", JSON.stringify({ type: "category", category: s.category }));
+              const el = e.currentTarget;
+              const rect = el.getBoundingClientRect();
+              const clone = el.cloneNode(true);
+              clone.style.cssText = `position:fixed;top:0;left:-${rect.width + 20}px;width:${rect.width}px;height:${rect.height}px;margin:0;transform:none;opacity:0.9;pointer-events:none;`;
+              document.body.appendChild(clone);
+              e.dataTransfer.setDragImage(clone, e.clientX - rect.left, e.clientY - rect.top);
+              requestAnimationFrame(() => clone.remove());
             }}
           />
         ))}
