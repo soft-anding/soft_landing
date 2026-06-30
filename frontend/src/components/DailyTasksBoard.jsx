@@ -51,18 +51,18 @@ export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusC
             return (
               <div
                 key={key}
-                className={`rounded-xl border transition-colors ${
+                className={`rounded-2xl border transition-colors ${
                   done
                     ? "border-primary/30 bg-primary-container/10"
                     : "border-outline-variant/20"
                 }`}
               >
                 {/* Header row: check · title · expand · remove */}
-                <div className="flex items-start gap-xs p-sm">
+                <div className="flex items-center gap-xs p-sm">
                   {/* Done toggle */}
                   <button
                     onClick={() => onStatusChange(item, done ? "לא התחיל" : "הושלם")}
-                    className="shrink-0 mt-0.5 transition-colors"
+                    className="shrink-0 transition-colors"
                     title={done ? "בטל סימון" : "סמן כהושלם"}
                   >
                     <span
@@ -92,7 +92,7 @@ export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusC
                   {steps.length > 0 && (
                     <button
                       onClick={() => toggleSteps(key)}
-                      className={`shrink-0 mt-0.5 transition-colors rounded-full ${
+                      className={`shrink-0 transition-colors rounded-full ${
                         isOpen
                           ? "text-primary"
                           : "text-on-surface-variant/30 hover:text-on-surface-variant"
@@ -111,7 +111,7 @@ export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusC
                   {/* Remove from board */}
                   <button
                     onClick={() => onRemove(key)}
-                    className="shrink-0 mt-0.5 text-on-surface-variant/30 hover:text-error transition-colors rounded-full"
+                    className="shrink-0 text-on-surface-variant/30 hover:text-error transition-colors rounded-full"
                     title="הסר מהלוח"
                   >
                     <span className="material-symbols-outlined text-sm">close</span>
