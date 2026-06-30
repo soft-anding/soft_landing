@@ -9,7 +9,6 @@ from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -20,7 +19,7 @@ from .config import settings
 from .constants import STATUSES
 from .notification_service import TZ, generate_daily_notifications
 from .routers import catalog, daily_board, documents_agent, health, internal, task_agent, telegram, tracking
-from .telegram_service import poll_updates
+from .telegram_service import register_webhook
 
 scheduler = BackgroundScheduler(timezone=TZ)
 
@@ -33,11 +32,10 @@ async def lifespan(_app: FastAPI):
         id="daily_notifications",
     )
     # RAILWAY_ENVIRONMENT is injected only on actual Railway deploys — gating on
-    # it (not just the token) stops the poller from double-running if someone's
-    # local .env happens to have the real bot token, which causes every Telegram
-    # message to get answered twice (once per process) with different wording.
+    # it (not just the token) keeps a local server with the real bot token from
+    # ever registering itself as the webhook target.
     if settings.telegram_bot_token and os.environ.get("RAILWAY_ENVIRONMENT"):
-        scheduler.add_job(poll_updates, IntervalTrigger(seconds=10), id="telegram_poll")
+        register_webhook()
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
