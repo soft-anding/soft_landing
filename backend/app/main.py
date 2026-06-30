@@ -3,14 +3,15 @@
 Serves the JSON API under /api and, in production, the built React SPA from
 frontend/dist at the root (so a single Railway service hosts both).
 """
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auth import CurrentUser, get_current_user
@@ -18,7 +19,7 @@ from .config import settings
 from .constants import STATUSES
 from .notification_service import TZ, generate_daily_notifications
 from .routers import catalog, daily_board, documents_agent, health, internal, task_agent, telegram, tracking
-from .telegram_service import poll_updates
+from .telegram_service import register_webhook
 
 scheduler = BackgroundScheduler(timezone=TZ)
 
@@ -30,8 +31,11 @@ async def lifespan(_app: FastAPI):
         CronTrigger(hour=8, minute=0, timezone=TZ),
         id="daily_notifications",
     )
-    if settings.telegram_bot_token:
-        scheduler.add_job(poll_updates, IntervalTrigger(seconds=10), id="telegram_poll")
+    # RAILWAY_ENVIRONMENT is injected only on actual Railway deploys — gating on
+    # it (not just the token) keeps a local server with the real bot token from
+    # ever registering itself as the webhook target.
+    if settings.telegram_bot_token and os.environ.get("RAILWAY_ENVIRONMENT"):
+        register_webhook()
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -39,9 +43,10 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Soft Landing Moving Assistant API", version="0.1.0", lifespan=lifespan)
 
+# עדכון ה-Middleware כדי לאפשר גישה חופשית לפרונטנד ב-Railway ללא חסימות CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -75,4 +80,17 @@ app.include_router(api)
 # Repo root = backend/app/main.py -> parents[2]
 _dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 if _dist.is_dir():
-    app.mount("/", StaticFiles(directory=str(_dist), html=True), name="spa")
+    # Mount /assets separately so JS/CSS are served efficiently.
+    # The catch-all route below handles everything else — this avoids
+    # app.mount("/", StaticFiles(html=True)) which can intercept /api/* routes
+    # and return index.html instead of JSON.
+    _assets = _dist / "assets"
+    if _assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(_assets)), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        file_path = _dist / full_path
+        if file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(_dist / "index.html"))

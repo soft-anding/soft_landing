@@ -13,7 +13,8 @@ export default defineConfig({
       },
     },
   },
+  // הבלוק החדש שמאשר ל-Railway להציג את האתר מבלי לחסום את ה-Host:
   preview: {
-    allowedHosts: ["frontend-staging-d554.up.railway.app"],
+    allowedHosts: true,
   },
 });

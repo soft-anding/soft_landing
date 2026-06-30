@@ -144,7 +144,7 @@ export default function ProfileDrawer({ open, onClose }) {
   }, [open]);
 
   // While waiting for the user to hit Start in the bot, poll the profile so
-  // "מחובר/ת" appears as soon as telegram_service.poll_updates links the chat.
+  // "מחובר/ת" appears as soon as the Telegram webhook links the chat.
   useEffect(() => {
     if (!open || !tgAwaiting || telegramConnected) return;
     const interval = setInterval(refreshProfile, 3000);
