@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusChange }) {
+export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusChange, onMinimize }) {
   // Build a lookup map so we can render in the agent-suggested position order.
   const taskMap = Object.fromEntries(
     tasks.map((t) => [`${t.item_type}:${t.item_id}`, t])
@@ -23,6 +23,17 @@ export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusC
           <span className="bg-primary-container text-on-primary-container rounded-full px-sm py-xs font-label-sm text-label-sm shrink-0">
             {pinned.length}
           </span>
+        )}
+        {onMinimize && (
+          <button
+            onClick={onMinimize}
+            className="shrink-0 text-on-surface-variant/40 hover:text-on-surface-variant transition-colors rounded-full"
+            title="כווץ לוח"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: "1.1rem", lineHeight: 1 }}>
+              remove
+            </span>
+          </button>
         )}
       </div>
 

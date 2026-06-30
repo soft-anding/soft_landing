@@ -377,6 +377,7 @@ export default function Dashboard() {
   const [error,        setError]        = useState(null);
   const [savingId,     setSavingId]     = useState(null);
   const [showAddTask,  setShowAddTask]  = useState(false);
+  const [boardMinimized, setBoardMinimized] = useState(false);
 
   // Ordered array of "item_type:item_id" strings — source of truth for the daily board.
   // Order matches the `position` column in user_daily_board (agent-suggested order preserved).
@@ -616,14 +617,36 @@ export default function Dashboard() {
               </div>
 
               {/* Left column — daily board */}
-              <div className="w-72 shrink-0 h-[544px] mt-sm">
-                <DailyTasksBoard
-                  tasks={tasks}
-                  pinnedKeys={pinnedKeys}
-                  onRemove={handleUnpin}
-                  onStatusChange={handleStatusChange}
-                />
-              </div>
+              {boardMinimized ? (
+                <button
+                  onClick={() => setBoardMinimized(false)}
+                  className="w-10 shrink-0 mt-sm bg-white rounded-2xl border border-outline-variant/30 soft-shadow flex flex-col items-center justify-center gap-sm py-md cursor-pointer hover:border-primary/50 transition-colors"
+                  title="פתח לוח יומי"
+                >
+                  <span className="material-symbols-outlined text-primary" style={{ fontSize: "1.25rem" }}>
+                    event_note
+                  </span>
+                  <span
+                    className="text-on-surface-variant font-label-sm text-label-sm"
+                    style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", fontSize: "0.7rem" }}
+                  >
+                    לוח יומי
+                  </span>
+                  <span className="material-symbols-outlined text-primary/50" style={{ fontSize: "1rem" }}>
+                    chevron_left
+                  </span>
+                </button>
+              ) : (
+                <div className="w-72 shrink-0 h-[544px] mt-sm">
+                  <DailyTasksBoard
+                    tasks={tasks}
+                    pinnedKeys={pinnedKeys}
+                    onRemove={handleUnpin}
+                    onStatusChange={handleStatusChange}
+                    onMinimize={() => setBoardMinimized(true)}
+                  />
+                </div>
+              )}
             </div>
           </>
         )}
