@@ -15,15 +15,23 @@ function BellIcon({ className }) {
   );
 }
 
-// "לפני 3 ימים" / "לפני 5 שעות" / "לפני רגע" — no existing relative-time helper in the codebase.
 function formatRelativeHe(dateStr) {
   const diffMs = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diffMs / 60000);
   if (minutes < 1) return "לפני רגע";
-  if (minutes < 60) return `לפני ${minutes} דקות`;
+  if (minutes < 60) {
+    if (minutes === 1) return "לפני דקה";
+    return `לפני ${minutes} דקות`;
+  }
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `לפני ${hours} שעות`;
+  if (hours < 24) {
+    if (hours === 1) return "לפני שעה";
+    if (hours === 2) return "לפני שעתיים";
+    return `לפני ${hours} שעות`;
+  }
   const days = Math.floor(hours / 24);
+  if (days === 1) return "לפני יום";
+  if (days === 2) return "לפני יומיים";
   return `לפני ${days} ימים`;
 }
 
@@ -96,51 +104,52 @@ export default function NotificationsBell() {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-sm w-96 bg-white rounded-2xl soft-shadow border border-outline-variant/30 overflow-hidden text-right">
-          <div className="relative px-md py-sm border-b border-outline-variant/30">
+        <div className="absolute left-0 top-full mt-sm w-80 bg-white rounded-2xl soft-shadow border border-outline-variant/30 overflow-hidden text-right">
+          <div className="relative px-sm py-xs border-b border-outline-variant/30">
             <button
               type="button"
               onClick={closeAndMarkRead}
               aria-label="סגור"
-              className="absolute top-sm right-sm w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
+              className="absolute top-xs right-xs w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
             >
-              <span className="material-symbols-outlined text-base">close</span>
+              <span className="material-symbols-outlined" style={{ fontSize: "1rem" }}>close</span>
             </button>
             <button
               type="button"
               onClick={markAllRead}
               disabled={unreadCount === 0}
-              className="absolute top-sm left-sm font-label-sm text-label-sm text-primary underline hover:no-underline disabled:text-on-surface-variant/40 disabled:no-underline disabled:cursor-default"
+              className="absolute top-xs left-sm font-label-sm text-label-sm text-primary underline hover:no-underline disabled:text-on-surface-variant/40 disabled:no-underline disabled:cursor-default"
+              style={{ lineHeight: "1.5rem" }}
             >
               סמן הכל כנקרא
             </button>
-            <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface pr-8">התראות</h3>
+            <h3 className="font-label-md text-label-md font-bold text-on-surface pr-6" style={{ lineHeight: "1.5rem" }}>התראות</h3>
           </div>
 
           {notifications.length === 0 ? (
-            <p className="px-md py-lg text-center font-label-sm text-label-sm text-on-surface-variant">
+            <p className="px-sm py-md text-center font-label-sm text-label-sm text-on-surface-variant">
               אין התראות חדשות
             </p>
           ) : (
             <>
-              <div className={expanded ? "max-h-80 overflow-y-auto" : ""}>
+              <div className={expanded ? "max-h-72 overflow-y-auto" : ""}>
                 {visible.map((n) => {
                   const urgent = n.severity === "urgent";
                   return (
                     <div
                       key={n.id}
-                      className={`flex items-start gap-xs px-md py-sm border-b border-outline-variant/20 last:border-b-0 ${
+                      className={`flex items-start gap-xs px-sm py-xs border-b border-outline-variant/20 last:border-b-0 ${
                         urgent ? "bg-error-container/40" : ""
                       }`}
                     >
                       {!n.is_read && (
                         <span
-                          className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${urgent ? "bg-error" : "bg-primary"}`}
+                          className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${urgent ? "bg-error" : "bg-primary"}`}
                           aria-hidden="true"
                         />
                       )}
-                      <div className={n.is_read ? "mr-[14px]" : ""}>
-                        <p className={`font-bold font-body-sm text-body-sm ${urgent ? "text-error" : "text-on-surface"}`}>
+                      <div className={n.is_read ? "mr-[10px]" : ""}>
+                        <p className={`font-bold font-label-md text-label-md ${urgent ? "text-error" : "text-on-surface"}`}>
                           {n.content}
                         </p>
                         {n.task_title && (
@@ -174,7 +183,7 @@ export default function NotificationsBell() {
                 <button
                   type="button"
                   onClick={() => setExpanded(true)}
-                  className="w-full px-md py-sm font-label-md text-label-md text-primary hover:bg-outline-variant/10 transition-colors text-center"
+                  className="w-full px-sm py-xs font-label-sm text-label-sm text-primary hover:bg-outline-variant/10 transition-colors text-center"
                 >
                   הצג הכל
                 </button>
