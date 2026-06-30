@@ -414,6 +414,41 @@ def get_conversation(
     return {"conversation_id": row["conversation_id"], "conversation_name": row["conversation_name"], "messages": msgs}
 
 
+def _build_agent_messages(user_id: str, history: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Builds the system-context-primed message list (+ the raw items, needed
+    by tools like get_daily_board) for one agent turn. Shared by the streaming
+    HTTP route and any non-HTTP caller (e.g. the Telegram bot)."""
+    system_prompt = _load_system_prompt()
+    # Fetches the profile and the task list in one parallel batch (instead of
+    # the profile first and everything else after) — shaves the pre-stream
+    # delay down to roughly the slowest single query instead of two stages.
+    items, profile = fetch_items_with_status_and_profile(user_id, item_type="moving_task")
+    context = (
+        f"{system_prompt}\n\n"
+        f"תאריך היום: {date.today().isoformat()}\n\n"
+        f"להלן המשימות הנוכחיות של המשתמש/ת לקראת המעבר (item_type#item_id לשימוש בכלים):\n"
+        f"{_tasks_context(items)}\n\n"
+        f"פרטי פרופיל המשתמש/ת: {_profile_context(profile)}"
+    )
+    messages: list[dict] = [{"role": "system", "content": context}] + history
+    return messages, items
+
+
+def get_agent_reply(user_id: str, history: list[dict]) -> str:
+    """Non-streaming variant of /chat for callers without an HTTP response
+    object — currently the Telegram bot (see telegram_service.py). Runs the
+    same tool-calling engine to completion and returns the full reply text,
+    still raw (may include the [SUGGEST_DAILY:...] marker or a {"reply":...}
+    wrapper) — cleanup is the caller's responsibility, same as the frontend
+    does for the streamed version today.
+    """
+    if not settings.tasks_agent_openai_api_key:
+        raise RuntimeError("מפתח ה-API של סוכן המשימות לא הוגדר בשרת.")
+    messages, items = _build_agent_messages(user_id, history)
+    client = OpenAI(api_key=settings.tasks_agent_openai_api_key)
+    return "".join(_stream_reply(client, messages, user_id, items))
+
+
 @router.post("/chat")
 def chat(
     payload: TaskAgentChatRequest,
@@ -427,21 +462,8 @@ def chat(
     if not settings.tasks_agent_openai_api_key:
         raise HTTPException(status_code=503, detail="מפתח ה-API של סוכן המשימות לא הוגדר בשרת.")
 
-    system_prompt = _load_system_prompt()
-    # Fetches the profile and the task list in one parallel batch (instead of
-    # the profile first and everything else after) — shaves the pre-stream
-    # delay down to roughly the slowest single query instead of two stages.
-    items, profile = fetch_items_with_status_and_profile(user.id, item_type="moving_task")
-    context = (
-        f"{system_prompt}\n\n"
-        f"תאריך היום: {date.today().isoformat()}\n\n"
-        f"להלן המשימות הנוכחיות של המשתמש/ת לקראת המעבר (item_type#item_id לשימוש בכלים):\n"
-        f"{_tasks_context(items)}\n\n"
-        f"פרטי פרופיל המשתמש/ת: {_profile_context(profile)}"
-    )
-
-    messages: list[dict] = [{"role": "system", "content": context}]
-    messages += [{"role": m.role, "content": m.content} for m in payload.messages]
+    history = [{"role": m.role, "content": m.content} for m in payload.messages]
+    messages, items = _build_agent_messages(user.id, history)
 
     client = OpenAI(api_key=settings.tasks_agent_openai_api_key)
     return StreamingResponse(
