@@ -12,10 +12,8 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-    export default defineConfig({
+  },
   preview: {
-    allowedHosts: ['frontend-staging-d554.up.railway.app']
-  }
-})
+    allowedHosts: ["frontend-staging-d554.up.railway.app"],
   },
 });
