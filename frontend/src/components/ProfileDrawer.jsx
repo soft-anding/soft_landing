@@ -242,6 +242,7 @@ export default function ProfileDrawer({ open, onClose }) {
     await refreshProfile();
     setSaving(false);
     setSaved(true);
+    setTimeout(onClose, 800);
   }
 
   const allCatsSelected = form.interest_categories.includes("all");

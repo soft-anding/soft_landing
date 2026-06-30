@@ -104,7 +104,7 @@ export default function NotificationsBell() {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-sm w-80 bg-white rounded-2xl soft-shadow border border-outline-variant/30 overflow-hidden text-right">
+        <div className="absolute left-0 top-full mt-xs w-80 bg-white rounded-2xl soft-shadow border border-outline-variant/30 overflow-hidden text-right">
           <div className="relative px-sm py-xs border-b border-outline-variant/30">
             <button
               type="button"
@@ -123,7 +123,7 @@ export default function NotificationsBell() {
             >
               סמן הכל כנקרא
             </button>
-            <h3 className="font-label-md text-label-md font-bold text-on-surface pr-6" style={{ lineHeight: "1.5rem" }}>התראות</h3>
+            <h3 className="font-body-sm text-body-sm font-bold text-on-surface pr-6" style={{ lineHeight: "1.5rem" }}>התראות</h3>
           </div>
 
           {notifications.length === 0 ? (
@@ -179,13 +179,16 @@ export default function NotificationsBell() {
                   );
                 })}
               </div>
-              {!expanded && notifications.length > MAX_COLLAPSED && (
+              {notifications.length > MAX_COLLAPSED && (
                 <button
                   type="button"
-                  onClick={() => setExpanded(true)}
-                  className="w-full px-sm py-xs font-label-sm text-label-sm text-primary hover:bg-outline-variant/10 transition-colors text-center"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="w-full px-sm py-xs font-label-sm text-label-sm text-primary hover:bg-outline-variant/10 transition-colors text-center flex items-center justify-center gap-xs"
                 >
-                  הצג הכל
+                  <span className="material-symbols-outlined" style={{ fontSize: "0.9rem" }}>
+                    {expanded ? "expand_less" : "expand_more"}
+                  </span>
+                  {expanded ? "הסתר" : "הצג הכל"}
                 </button>
               )}
             </>

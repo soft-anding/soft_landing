@@ -1,13 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // Slide-over panel from the screen edge, used instead of an inline
 // accordion so long detail content doesn't push the page layout down.
 export default function SideDrawer({ open, onClose, title, side = "right", children }) {
+  const scrollRef = useRef(null);
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
@@ -46,7 +49,7 @@ export default function SideDrawer({ open, onClose, title, side = "right", child
           <h3 className="font-headline-sm text-headline-sm text-on-surface text-center px-lg">{title}</h3>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-md py-md text-right">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-md py-md text-right">
           {children}
         </div>
       </div>
