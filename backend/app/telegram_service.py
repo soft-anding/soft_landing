@@ -1,14 +1,17 @@
 """Mirrors in-app notifications to Telegram, and lets a linked user chat with
 the task agent directly from Telegram (same engine as the in-app chat).
 
-Uses polling (getUpdates) instead of a webhook so linking works the same in
-local dev and in production without registering a public HTTPS callback URL.
+Uses a webhook (registered once at startup via register_webhook) rather than
+polling, so Telegram only ever has one registered delivery target — it
+refuses getUpdates from anywhere else while a webhook is active, which rules
+out duplicate replies from a stray local server holding the same bot token.
 Account linking: the user requests a short code (see routers/telegram.py),
-opens a t.me deep-link with that code as the /start payload, and poll_updates
+opens a t.me deep-link with that code as the /start payload, and the webhook
 resolves the resulting message into a telegram_chat_id on their profile.
 """
 import json
 import logging
+import os
 import re
 import secrets
 
@@ -21,7 +24,7 @@ from .supabase_client import get_supabase
 logger = logging.getLogger(__name__)
 
 _API_BASE = "https://api.telegram.org"
-_LINK_CONFIRMATION = "מחובר בהצלחה! מעכשיו תקבלו כאן גם את ההתראות מהמערכת."
+_LINK_CONFIRMATION = "מחובר בהצלחה! מעכשיו תקבלו כאן גם את ההתראות מהמערכת, ותוכלו להתייעץ ולהיעזר בי בכל שלב במעבר דירה!"
 _NOT_LINKED = "החשבון שלך עדיין לא מקושר. כדי לדבר איתי כאן, קשרו את הטלגרם דרך הפרופיל באפליקציה."
 _AGENT_ERROR = "מצטערים, הייתה שגיאה בפנייה לסוכן. נסו שוב בעוד רגע."
 
@@ -33,8 +36,11 @@ _TELEGRAM_MESSAGE_LIMIT = 4096
 
 _SUGGEST_DAILY_RE = re.compile(r"\[SUGGEST_DAILY:(\{.*?\})\]", re.DOTALL)
 
-_last_update_id: int | None = None
 _bot_username_cache: str | None = None
+# Generated fresh by register_webhook() on each startup and handed to Telegram
+# as the webhook's secret_token — incoming requests must echo it back in the
+# X-Telegram-Bot-Api-Secret-Token header, or they're rejected.
+_webhook_secret: str | None = None
 
 
 def _api_url(method: str) -> str:
@@ -72,6 +78,30 @@ def generate_link_code(user_id: str) -> str:
     code = secrets.token_hex(4)
     get_supabase().table("user_profiles").update({"telegram_link_code": code}).eq("id", user_id).execute()
     return code
+
+
+def register_webhook() -> None:
+    """Tells Telegram to push updates to this deploy's /api/telegram/webhook
+    instead of waiting to be polled. Safe to call on every startup — each
+    call overwrites whatever URL/secret was registered before, so only the
+    most-recently-started instance ever receives traffic."""
+    global _webhook_secret
+    domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+    if not domain:
+        logger.warning("RAILWAY_PUBLIC_DOMAIN not set — skipping Telegram webhook registration")
+        return
+    secret = secrets.token_hex(32)
+    url = f"https://{domain}/api/telegram/webhook"
+    try:
+        httpx.post(_api_url("setWebhook"), json={"url": url, "secret_token": secret}, timeout=10).raise_for_status()
+    except httpx.HTTPError:
+        logger.exception("Failed to register Telegram webhook")
+        return
+    _webhook_secret = secret
+
+
+def verify_secret(token: str | None) -> bool:
+    return _webhook_secret is not None and token == _webhook_secret
 
 
 # ── Agent reply cleanup — Python port of the frontend's unwrapReply /
@@ -172,8 +202,8 @@ def _handle_agent_message(sb, chat_id, text: str) -> None:
     try:
         raw_reply = task_agent.get_agent_reply(user_id, history[-_MAX_HISTORY_MESSAGES:])
     except Exception:
-        # Boundary call (OpenAI + Supabase) inside a scheduled job — must
-        # never raise, or it takes the whole poll loop down with it.
+        # Boundary call (OpenAI + Supabase) inside the webhook request — must
+        # never raise, or the user just sees the request silently fail.
         logger.exception("Task agent failed to reply to telegram chat_id=%s", chat_id)
         send_message(chat_id, _AGENT_ERROR)
         return
@@ -184,35 +214,18 @@ def _handle_agent_message(sb, chat_id, text: str) -> None:
     _save_conversation(sb, user_id, history)
 
 
-def poll_updates() -> None:
-    """Fetch pending Telegram updates: resolves /start <code> into an account
-    link, and routes any other text message to the task agent for a linked
-    user (or asks them to link their account first)."""
-    global _last_update_id
-    params = {"timeout": 0}
-    if _last_update_id is not None:
-        params["offset"] = _last_update_id + 1
-
-    try:
-        response = httpx.get(_api_url("getUpdates"), params=params, timeout=15)
-        response.raise_for_status()
-    except httpx.HTTPError:
-        logger.exception("Failed to poll Telegram updates")
+def handle_webhook_update(update: dict) -> None:
+    """Process a single Telegram update pushed by the webhook: resolves
+    /start <code> into an account link, and routes any other text message to
+    the task agent for a linked user (or asks them to link their account
+    first)."""
+    message = update.get("message") or {}
+    text = (message.get("text") or "").strip()
+    if not text:
         return
-
-    updates = response.json().get("result", [])
-    if not updates:
-        return
-
+    chat_id = message["chat"]["id"]
     sb = get_supabase()
-    for update in updates:
-        _last_update_id = update["update_id"]
-        message = update.get("message") or {}
-        text = (message.get("text") or "").strip()
-        if not text:
-            continue
-        chat_id = message["chat"]["id"]
-        if text.startswith("/start "):
-            _handle_start(sb, text, chat_id)
-            continue
-        _handle_agent_message(sb, chat_id, text)
+    if text.startswith("/start "):
+        _handle_start(sb, text, chat_id)
+        return
+    _handle_agent_message(sb, chat_id, text)
