@@ -361,9 +361,9 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
           <div className="flex items-center pt-sm border-t border-outline-variant/20">
             <button
               onClick={() => navigate(`/item/${item.item_type}/${item.item_id}`, { state: { item } })}
-              className="font-label-md text-label-md text-primary inline-flex items-center gap-xs hover:underline"
+              className="font-label-md text-[15px] leading-5 font-semibold text-primary inline-flex items-center gap-xs hover:underline"
             >
-              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              <span className="material-symbols-outlined text-xl">arrow_back</span>
               עמוד מלא
             </button>
           </div>
