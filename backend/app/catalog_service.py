@@ -182,6 +182,15 @@ def _profile_tags(profile: dict | None) -> set[str]:
         return tags
     for eligibility in (profile.get("special_eligibility") or []):
         tags.add(eligibility)
+    # occupation = "student" implies the student eligibility tag
+    if profile.get("occupation") == "student":
+        tags.add("student")
+    # birth_year ≤ current_year - 65 implies senior_citizen
+    birth_year = profile.get("birth_year")
+    if birth_year and isinstance(birth_year, int):
+        from datetime import date
+        if date.today().year - birth_year >= 65:
+            tags.add("senior_citizen")
     if profile.get("has_car"):
         tags.add("has_car")
     if profile.get("needs_movers"):
