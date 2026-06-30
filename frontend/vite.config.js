@@ -1,10 +1,20 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/react-refresh' // או מה שיש לך שם למעלה
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
+// In dev, proxy /api to the FastAPI server so the frontend can use same-origin URLs.
 export default defineConfig({
   plugins: [react()],
-  // לחלק הזה את צריכה לדאוג:
+  server: {
+    port: 5173,
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
+  },
+  // הבלוק החדש שמאשר ל-Railway להציג את האתר מבלי לחסום את ה-Host:
   preview: {
-    allowedHosts: true
-  }
-})
+    allowedHosts: true,
+  },
+});
