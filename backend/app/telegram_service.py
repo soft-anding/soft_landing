@@ -9,6 +9,7 @@ Account linking: the user requests a short code (see routers/telegram.py),
 opens a t.me deep-link with that code as the /start payload, and the webhook
 resolves the resulting message into a telegram_chat_id on their profile.
 """
+import html
 import json
 import logging
 import os
@@ -34,7 +35,12 @@ _AGENT_ERROR = "מצטערים, הייתה שגיאה בפנייה לסוכן. �
 _MAX_HISTORY_MESSAGES = 30
 _TELEGRAM_MESSAGE_LIMIT = 4096
 
-_SUGGEST_DAILY_RE = re.compile(r"\[SUGGEST_DAILY:(\{.*?\})\]", re.DOTALL)
+# Greedy (not lazy) — the payload is nested JSON ({"tasks":[{...}]}), so a
+# lazy .*? stops at the first inner "}" and produces invalid JSON. Greedy is
+# safe because the marker is always the last thing in the message.
+_SUGGEST_DAILY_RE = re.compile(r"\[SUGGEST_DAILY:(\{.*\})\]", re.DOTALL)
+
+_BOLD_RE = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
 
 _bot_username_cache: str | None = None
 # Generated fresh by register_webhook() on each startup and handed to Telegram
@@ -47,13 +53,28 @@ def _api_url(method: str) -> str:
     return f"{_API_BASE}/bot{settings.telegram_bot_token}/{method}"
 
 
+def _to_telegram_html(text: str) -> str:
+    """Escapes the agent's plain text for Telegram's HTML parse mode, then
+    turns **bold** markdown into real <b> tags so it actually renders as
+    bold instead of showing literal asterisks."""
+    escaped = html.escape(text, quote=False)
+    return _BOLD_RE.sub(r"<b>\1</b>", escaped)
+
+
 def send_message(chat_id: str, text: str) -> None:
+    formatted = _to_telegram_html(text)
     # Telegram rejects messages over 4096 chars — split defensively, even
     # though the agent's replies are capped well under this in practice.
-    chunks = [text[i : i + _TELEGRAM_MESSAGE_LIMIT] for i in range(0, len(text), _TELEGRAM_MESSAGE_LIMIT)] or [text]
+    chunks = [
+        formatted[i : i + _TELEGRAM_MESSAGE_LIMIT] for i in range(0, len(formatted), _TELEGRAM_MESSAGE_LIMIT)
+    ] or [formatted]
     for chunk in chunks:
         try:
-            httpx.post(_api_url("sendMessage"), json={"chat_id": chat_id, "text": chunk}, timeout=10).raise_for_status()
+            httpx.post(
+                _api_url("sendMessage"),
+                json={"chat_id": chat_id, "text": chunk, "parse_mode": "HTML"},
+                timeout=10,
+            ).raise_for_status()
         except httpx.HTTPError:
             logger.exception("Failed to send Telegram message to chat_id=%s", chat_id)
 

@@ -43,7 +43,10 @@ function unwrapReply(text) {
 // Extract [SUGGEST_DAILY:{...}] from text and return { clean, suggestion }.
 // Returns { clean: originalText, suggestion: null } if no annotation found.
 function parseSuggestion(text) {
-  const match = text.match(/\[SUGGEST_DAILY:(\{.*?\})\]/s);
+  // Greedy (not lazy) — the payload is nested JSON ({"tasks":[{...}]}), so a
+  // lazy .*? stops at the first inner "}" and produces invalid JSON. Greedy
+  // is safe because the marker is always the last thing in the message.
+  const match = text.match(/\[SUGGEST_DAILY:(\{.*\})\]/s);
   if (!match) return { clean: text, suggestion: null };
   try {
     const suggestion = JSON.parse(match[1]);
