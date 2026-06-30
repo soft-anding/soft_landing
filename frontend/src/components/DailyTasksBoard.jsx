@@ -52,103 +52,125 @@ export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusC
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-sm overflow-y-auto flex-1 -mx-xs px-xs">
-          {pinned.map((item) => {
-            const key = `${item.item_type}:${item.item_id}`;
-            const done = item.status === "הושלם";
-            const steps = item.action_steps?.filter(Boolean) ?? [];
-            const isOpen = openKey === key;
-
-            return (
-              <div
-                key={key}
-                className={`rounded-2xl border transition-colors ${
-                  done
-                    ? "border-primary/30 bg-primary-container/10"
-                    : "border-outline-variant/20"
-                }`}
-              >
-                {/* Header row: check · title · expand · remove */}
-                <div className="flex items-center gap-xs p-sm">
-                  {/* Done toggle */}
-                  <button
-                    onClick={() => onStatusChange(item, done ? "לא התחיל" : "הושלם")}
-                    className="shrink-0 transition-colors"
-                    title={done ? "בטל סימון" : "סמן כהושלם"}
-                  >
-                    <span
-                      className={`material-symbols-outlined transition-colors ${
-                        done ? "text-primary" : "text-on-surface-variant/30 hover:text-primary/60"
-                      }`}
-                      style={{
-                        fontSize: "1.25rem",
-                        lineHeight: 1,
-                        fontVariationSettings: done ? "'FILL' 1" : "'FILL' 0",
-                      }}
-                    >
-                      check_circle
-                    </span>
-                  </button>
-
-                  {/* Title */}
-                  <p
-                    className={`flex-1 text-right font-label-md text-label-md leading-snug ${
-                      done ? "line-through opacity-50 text-on-surface-variant" : "text-on-surface"
-                    }`}
-                  >
-                    {item.title_he}
-                  </p>
-
-                  {/* Expand steps — only if steps exist */}
-                  {steps.length > 0 && (
-                    <button
-                      onClick={() => toggleSteps(key)}
-                      className={`shrink-0 transition-colors rounded-full ${
-                        isOpen
-                          ? "text-primary"
-                          : "text-on-surface-variant/30 hover:text-on-surface-variant"
-                      }`}
-                      title={isOpen ? "סגור שלבים" : "הצג שלבי ביצוע"}
-                    >
-                      <span
-                        className="material-symbols-outlined"
-                        style={{ fontSize: "1.1rem", lineHeight: 1 }}
-                      >
-                        {isOpen ? "expand_less" : "expand_more"}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Remove from board */}
-                  <button
-                    onClick={() => onRemove(key)}
-                    className="shrink-0 text-on-surface-variant/30 hover:text-error transition-colors rounded-full"
-                    title="הסר מהלוח"
-                  >
-                    <span className="material-symbols-outlined text-sm">close</span>
-                  </button>
+        <div className="flex flex-col gap-md overflow-y-auto flex-1 -mx-xs px-xs">
+          {/* Group by category, preserving the agent-suggested position order */}
+          {(() => {
+            const groups = [];
+            const groupMap = {};
+            for (const item of pinned) {
+              const cat = item.category || "other";
+              const label = item.category_label || "אחר";
+              if (!groupMap[cat]) {
+                groupMap[cat] = { category: cat, label, items: [] };
+                groups.push(groupMap[cat]);
+              }
+              groupMap[cat].items.push(item);
+            }
+            return groups.map((group) => (
+              <div key={group.category} className="flex flex-col gap-sm">
+                {/* Category header */}
+                <div className="flex items-center gap-xs sticky top-0 bg-white/95 backdrop-blur-sm py-xs -mx-xs px-xs">
+                  <div className="flex-1 h-px bg-outline-variant/20" />
+                  <span className="font-label-sm text-label-sm text-on-surface-variant/60 shrink-0">
+                    {group.label}
+                  </span>
+                  <div className="flex-1 h-px bg-outline-variant/20" />
                 </div>
 
-                {/* Action steps — accordion */}
-                {isOpen && steps.length > 0 && (
-                  <div className="px-sm pb-sm border-t border-outline-variant/10 pt-xs">
-                    <ol className="flex flex-col gap-xs">
-                      {steps.map((step, i) => (
-                        <li key={i} className="flex items-start gap-xs text-right">
-                          <span className="font-label-sm text-label-sm text-primary shrink-0 mt-0.5 w-4 text-center">
-                            {i + 1}.
+                {/* Tasks in this category */}
+                {group.items.map((item) => {
+                  const key = `${item.item_type}:${item.item_id}`;
+                  const done = item.status === "הושלם";
+                  const steps = item.action_steps?.filter(Boolean) ?? [];
+                  const isOpen = openKey === key;
+                  return (
+                    <div
+                      key={key}
+                      className={`rounded-2xl border transition-colors ${
+                        done
+                          ? "border-primary/30 bg-primary-container/10"
+                          : "border-outline-variant/20"
+                      }`}
+                    >
+                      {/* Header row: check · title · expand · remove */}
+                      <div className="flex items-center gap-xs p-sm">
+                        <button
+                          onClick={() => onStatusChange(item, done ? "לא התחיל" : "הושלם")}
+                          className="shrink-0 transition-colors"
+                          title={done ? "בטל סימון" : "סמן כהושלם"}
+                        >
+                          <span
+                            className={`material-symbols-outlined transition-colors ${
+                              done ? "text-primary" : "text-on-surface-variant/30 hover:text-primary/60"
+                            }`}
+                            style={{
+                              fontSize: "1.25rem",
+                              lineHeight: 1,
+                              fontVariationSettings: done ? "'FILL' 1" : "'FILL' 0",
+                            }}
+                          >
+                            check_circle
                           </span>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant leading-snug">
-                            {step}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
+                        </button>
+
+                        <p
+                          className={`flex-1 text-right font-label-md text-label-md leading-snug ${
+                            done ? "line-through opacity-50 text-on-surface-variant" : "text-on-surface"
+                          }`}
+                        >
+                          {item.title_he}
+                        </p>
+
+                        {steps.length > 0 && (
+                          <button
+                            onClick={() => toggleSteps(key)}
+                            className={`shrink-0 transition-colors rounded-full ${
+                              isOpen
+                                ? "text-primary"
+                                : "text-on-surface-variant/30 hover:text-on-surface-variant"
+                            }`}
+                            title={isOpen ? "סגור שלבים" : "הצג שלבי ביצוע"}
+                          >
+                            <span
+                              className="material-symbols-outlined"
+                              style={{ fontSize: "1.1rem", lineHeight: 1 }}
+                            >
+                              {isOpen ? "expand_less" : "expand_more"}
+                            </span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => onRemove(key)}
+                          className="shrink-0 text-on-surface-variant/30 hover:text-error transition-colors rounded-full"
+                          title="הסר מהלוח"
+                        >
+                          <span className="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      </div>
+
+                      {isOpen && steps.length > 0 && (
+                        <div className="px-sm pb-sm border-t border-outline-variant/10 pt-xs">
+                          <ol className="flex flex-col gap-xs">
+                            {steps.map((step, i) => (
+                              <li key={i} className="flex items-start gap-xs text-right">
+                                <span className="font-label-sm text-label-sm text-primary shrink-0 mt-0.5 w-4 text-center">
+                                  {i + 1}.
+                                </span>
+                                <span className="font-label-sm text-label-sm text-on-surface-variant leading-snug">
+                                  {step}
+                                </span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            ));
+          })()}
         </div>
       )}
     </div>
