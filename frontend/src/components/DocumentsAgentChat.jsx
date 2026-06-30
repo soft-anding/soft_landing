@@ -306,7 +306,7 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
                 key={conv.conversation_id}
                 type="button"
                 onClick={() => loadConversation(conv.conversation_id)}
-                className="w-full flex items-center justify-between gap-xs px-sm py-sm rounded-md border border-outline-variant/60 bg-surface-container/40 hover:bg-surface-container transition-colors text-right"
+                className="w-full flex items-center justify-between gap-xs px-sm py-1.5 rounded-[7px] border border-outline-variant/60 bg-surface-container/40 hover:bg-surface-container transition-colors text-right"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-on-surface truncate">
