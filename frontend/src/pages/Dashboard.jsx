@@ -74,7 +74,7 @@ function DonutChart({ percentage, size = 68 }) {
 // When `onCollapse` is provided the box renders as a <div> (not a <button>) so we
 // can place a real <button> inside it for the collapse action without nesting issues.
 // When `compact` is true the box shrinks for the "other categories" row in State 2.
-function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
+function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onDragStart }) {
   const pinned = !!onCollapse;
   const chartSize = compact ? 56 : pinned ? 112 : 52;
   const pct = summary.percentage;
@@ -166,6 +166,8 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false }) {
   return (
     <button
       onClick={onClick}
+      draggable={!!onDragStart}
+      onDragStart={onDragStart}
       className="group bg-white rounded-2xl border border-outline-variant/30 soft-shadow flex flex-col items-center gap-xs p-sm transition-all duration-150 hover:border-primary/50 hover:bg-surface-bright active:scale-[0.97] w-full text-center cursor-pointer"
     >
       {inner}
@@ -328,6 +330,10 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
                     summary={s}
                     compact
                     onClick={() => fadeTransition(() => setExpandedCategory(s))}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "copy";
+                      e.dataTransfer.setData("application/json", JSON.stringify({ type: "category", category: s.category }));
+                    }}
                   />
                 ))}
               </div>
@@ -344,6 +350,10 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
             key={s.category}
             summary={s}
             onClick={() => fadeTransition(() => setExpandedCategory(s))}
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "copy";
+              e.dataTransfer.setData("application/json", JSON.stringify({ type: "category", category: s.category }));
+            }}
           />
         ))}
       </div>
@@ -493,6 +503,37 @@ export default function Dashboard() {
       window.removeEventListener("tasks-changed", onTasksChanged);
     };
   }, [destinationCity]);
+
+  async function handleBoardDrop(e) {
+    e.preventDefault();
+    const raw = e.dataTransfer.getData("application/json");
+    if (!raw) return;
+    let data;
+    try { data = JSON.parse(raw); } catch { return; }
+
+    let itemsToAdd = [];
+    if (data.type === "task") {
+      const item = tasks.find((t) => t.item_type === data.item_type && t.item_id === data.item_id);
+      const key = item && `${item.item_type}:${item.item_id}`;
+      if (item && !pinnedIds.has(key)) itemsToAdd = [{ item_type: item.item_type, item_id: item.item_id }];
+    } else if (data.type === "category") {
+      itemsToAdd = tasks
+        .filter((t) => (t.category || "other") === data.category && !pinnedIds.has(`${t.item_type}:${t.item_id}`))
+        .map((t) => ({ item_type: t.item_type, item_id: t.item_id }));
+    }
+    if (!itemsToAdd.length) return;
+
+    const newKeys = itemsToAdd.map((i) => `${i.item_type}:${i.item_id}`);
+    setPinnedKeys((prev) => [...prev, ...newKeys]);
+    try {
+      const rows = await api.addToDailyBoard(itemsToAdd);
+      const keys = rows.map((r) => `${r.item_type}:${r.item_id}`);
+      setPinnedKeys(keys);
+      writeDailyBoardCache(keys);
+    } catch {
+      setPinnedKeys((prev) => prev.filter((k) => !newKeys.includes(k)));
+    }
+  }
 
   const handleTaskCreated = (newItem) => {
     setTasks((prev) => {
@@ -644,6 +685,7 @@ export default function Dashboard() {
                     onRemove={handleUnpin}
                     onStatusChange={handleStatusChange}
                     onMinimize={() => setBoardMinimized(true)}
+                    onDrop={handleBoardDrop}
                   />
                 </div>
               )}

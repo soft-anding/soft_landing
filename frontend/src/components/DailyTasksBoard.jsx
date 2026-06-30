@@ -1,19 +1,27 @@
 import { useState } from "react";
 
-export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusChange, onMinimize }) {
+export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusChange, onMinimize, onDrop }) {
   // Build a lookup map so we can render in the agent-suggested position order.
   const taskMap = Object.fromEntries(
     tasks.map((t) => [`${t.item_type}:${t.item_id}`, t])
   );
   const pinned = pinnedKeys.map((k) => taskMap[k]).filter(Boolean);
   const [openKey, setOpenKey] = useState(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   function toggleSteps(key) {
     setOpenKey((prev) => (prev === key ? null : key));
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-outline-variant/30 soft-shadow p-md h-full flex flex-col">
+    <div
+      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setIsDragOver(false); }}
+      onDrop={(e) => { setIsDragOver(false); onDrop?.(e); }}
+      className={`bg-white rounded-2xl border soft-shadow p-md h-full flex flex-col transition-colors duration-150 ${
+        isDragOver ? "border-primary border-2 bg-primary-container/5" : "border-outline-variant/30"
+      }`}
+    >
       <div className="flex items-center gap-sm mb-md">
         <span className="material-symbols-outlined text-primary">event_note</span>
         <h2 className="font-headline-sm text-headline-sm text-on-surface flex-1 text-right">

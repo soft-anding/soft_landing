@@ -238,12 +238,28 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
 
   return (
     <div
-      className={`bg-white rounded-2xl border soft-shadow flex flex-col h-full transition-all duration-200 ${
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData(
+          "application/json",
+          JSON.stringify({ type: "task", item_type: item.item_type, item_id: item.item_id })
+        );
+      }}
+      className={`group bg-white rounded-2xl border soft-shadow flex flex-col h-full transition-all duration-200 ${
         done ? "border-primary/40" : "border-outline-variant/30"
       }`}
     >
-      {/* ── Header: title + pin button ───────────────────────────────── */}
-      <div className="p-md flex items-start justify-between gap-sm">
+      {/* ── Header: drag handle · title · pin button ─────────────────── */}
+      <div className="p-md flex items-start gap-sm">
+        <span
+          className="material-symbols-outlined text-on-surface-variant/20 group-hover:text-on-surface-variant/50 transition-colors shrink-0 mt-0.5 cursor-grab select-none"
+          style={{ fontSize: "1rem" }}
+          title="גרור ללוח היומי"
+        >
+          drag_indicator
+        </span>
+
         <div className="flex flex-col gap-xs flex-1 text-right min-w-0">
           {item.category_label && (
             <span className="font-label-sm text-label-sm text-on-surface-variant">
