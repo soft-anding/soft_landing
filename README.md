@@ -1,3 +1,5 @@
+<div dir="rtl">
+
 # נחיתה רכה — Soft Landing Moving Assistant
 
 אפליקציית ווב בעברית שמלווה משתמשים במעבר דירה בין תל אביב לירושלים ולהפך.
@@ -251,3 +253,5 @@ npm run dev          # http://localhost:5174  (proxies /api -> :8000)
 | POST   | `/api/telegram/link-code`         | יצירת קוד קישור חשבון בן 6 ספרות            |
 | POST   | `/api/telegram/webhook`           | webhook של הבוט (הודעות נכנסות)             |
 | POST   | `/api/internal/notifications/run` | הפעלה ידנית של משימת ההתראות היומית         |
+
+</div>
