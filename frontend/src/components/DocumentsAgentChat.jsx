@@ -67,7 +67,6 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
   const [saveError, setSaveError] = useState(null);
   const [view, setView] = useState("chat");
   const [history, setHistory] = useState([]);
-  const [historyFetching, setHistoryFetching] = useState(false);
   const [loadedConversationId, setLoadedConversationId] = useState(null);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
@@ -104,6 +103,13 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
       return [{ role: "assistant", text: greeting }];
     });
   }, [open, category]);
+
+  useEffect(() => {
+    if (!open) return;
+    api.getDocumentsAgentConversations()
+      .then((data) => setHistory(data))
+      .catch(() => setHistory([]));
+  }, [open]);
 
   if (!open) return null;
 
@@ -199,17 +205,7 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
     }
   }
 
-  async function switchToHistory() {
-    if (view === "history" || historyFetching) return;
-    setHistoryFetching(true);
-    try {
-      const data = await api.getDocumentsAgentConversations();
-      setHistory(data);
-    } catch {
-      setHistory([]);
-    } finally {
-      setHistoryFetching(false);
-    }
+  function switchToHistory() {
     setView("history");
   }
 
@@ -285,14 +281,13 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
         <button
           type="button"
           onClick={switchToHistory}
-          disabled={historyFetching}
-          className={`flex-1 py-2 text-xs font-medium border-b-2 transition-all ${
+          className={`flex-1 py-2 text-xs font-medium border-b-2 transition-colors ${
             view === "history"
               ? "border-primary text-primary"
               : "border-transparent text-on-surface-variant hover:text-on-surface"
-          } ${historyFetching ? "opacity-50" : ""}`}
+          }`}
         >
-          {historyFetching ? "טוען…" : "שיחות קודמות"}
+          שיחות קודמות
         </button>
       </div>
 
@@ -315,7 +310,7 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
                   <p className="text-xs font-semibold text-green-900 truncate">
                     {conv.conversation_name || "שיחה ללא שם"}
                   </p>
-                  <p className="text-[9px] text-gray-400 mt-0.5">
+                  <p className="text-[9px] text-gray-500 font-medium mt-0.5">
                     {(() => { const d = new Date(conv.created_at); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`; })()}
                     {" · "}
                     {conv.message_count} הודעות
