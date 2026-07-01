@@ -107,7 +107,6 @@ export default function RightsBenefits() {
   const { userProfile } = useAuth();
 
   const destinationCity = userProfile?.destination_city ?? null;
-  const interestCats     = userProfile?.interest_categories ?? null;
 
   const cacheKey = rightsCacheKey(destinationCity);
   const cached   = readRightsCache(cacheKey);
@@ -226,7 +225,6 @@ export default function RightsBenefits() {
               {cityLabel && (
                 <p className="font-label-md text-label-md text-on-surface-variant mb-md text-right">
                   מוצג מידע רלוונטי ל{cityLabel}
-                  {interestCats && !interestCats.includes("all") && " · לפי הנושאים שבחרת"}
                 </p>
               )}
 

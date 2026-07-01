@@ -166,7 +166,7 @@ export default function ItemDetail() {
         {item && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-md items-start">
             {/* Main content */}
-            <div className="lg:col-span-2 bg-white rounded-2xl p-lg shadow-sm soft-shadow text-right">
+            <div className="lg:col-span-2 bg-white rounded-2xl p-lg shadow-sm soft-shadow text-right lg:sticky lg:top-28">
               <span className="text-label-sm px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
                 {item.item_type === "rights_item" ? "זכות / הטבה" : "משימה"} · {item.category_label}
               </span>
