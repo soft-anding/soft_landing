@@ -239,7 +239,7 @@ def _execute_tool(user_id: str, name: str, args: dict, items: list[dict]) -> dic
 
 # Caps worst-case reply latency without affecting the short, focused answers
 # the prompt already asks for (~500 tokens is generous for that).
-_MAX_REPLY_TOKENS = 500
+_MAX_REPLY_TOKENS = 800
 
 
 def _create_stream(client: OpenAI, messages: list[dict], tools: list[dict] | None = None):
