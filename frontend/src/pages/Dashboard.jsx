@@ -76,7 +76,7 @@ function DonutChart({ percentage, size = 68 }) {
 // When `compact` is true the box shrinks for the "other categories" row in State 2.
 function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onDragStart }) {
   const pinned = !!onCollapse;
-  const chartSize = compact ? 56 : pinned ? 112 : 52;
+  const chartSize = compact ? 72 : pinned ? 112 : 52;
   const pct = summary.percentage;
 
   const inner = (
@@ -95,7 +95,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onD
         )}
         <span
           className={`text-on-surface leading-snug ${
-            compact ? "font-label-sm text-label-sm" : pinned ? "font-headline-sm text-headline-sm" : "font-label-md text-label-md"
+            compact ? "font-label-md text-label-md" : pinned ? "font-headline-sm text-headline-sm" : "font-label-md text-label-md"
           }`}
         >
           {summary.label}
@@ -105,7 +105,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onD
         <DonutChart percentage={pct} size={chartSize} />
         <span
           className="absolute inset-0 flex items-center justify-center font-semibold text-primary"
-          style={{ fontSize: compact ? "0.85rem" : pinned ? "1.5rem" : "0.72rem" }}
+          style={{ fontSize: compact ? "1rem" : pinned ? "1.5rem" : "0.72rem" }}
         >
           {pct}%
         </span>
@@ -125,7 +125,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onD
       )}
       {!compact && !pinned && (
         <span className="font-label-sm text-label-sm text-on-surface-variant">
-          {`${summary.completed} מתוך ${summary.total}`}
+          {`בוצעו ${summary.completed} מתוך ${summary.total}`}
         </span>
       )}
     </>
@@ -157,7 +157,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onD
             {summary.label}
           </span>
           <span className="font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">
-            {summary.completed} מתוך {summary.total} משימות
+            בוצעו {summary.completed} מתוך {summary.total} משימות
           </span>
         </div>
       </div>
@@ -361,7 +361,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
                 <span className="font-label-sm text-label-sm text-on-surface-variant/60 shrink-0">{label}</span>
                 <div className="flex-1 h-px bg-outline-variant/20" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start">
                 {items.map((item) => {
                   const id = `${item.item_type}:${item.item_id}`;
                   return (
@@ -396,7 +396,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
               onCollapse={() => fadeTransition(() => setExpandedCategory(null))}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md mt-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start mt-lg">
             {catTasks.map((item) => {
               const id = `${item.item_type}:${item.item_id}`;
               return (

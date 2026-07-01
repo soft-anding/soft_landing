@@ -215,7 +215,7 @@ export default function RightsBenefits() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="חיפוש זכויות, הטבה או שירות..."
+                  placeholder="חפשו הטבות, זכויות או שירותים שרלוונטיים אליכם..."
                   className="w-full rounded-full border border-outline-variant bg-white pr-12 pl-md py-3 font-body-md text-body-md text-on-surface text-right focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                 />
                 <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">

@@ -239,7 +239,7 @@ def _execute_tool(user_id: str, name: str, args: dict, items: list[dict]) -> dic
 
 # Caps worst-case reply latency without affecting the short, focused answers
 # the prompt already asks for (~500 tokens is generous for that).
-_MAX_REPLY_TOKENS = 500
+_MAX_REPLY_TOKENS = 800
 
 
 def _create_stream(client: OpenAI, messages: list[dict], tools: list[dict] | None = None):
@@ -414,7 +414,7 @@ def get_conversation(
     return {"conversation_id": row["conversation_id"], "conversation_name": row["conversation_name"], "messages": msgs}
 
 
-def _build_agent_messages(user_id: str, history: list[dict]) -> tuple[list[dict], list[dict]]:
+def _build_agent_messages(user_id: str, history: list[dict], *, source: str = "app") -> tuple[list[dict], list[dict]]:
     """Builds the system-context-primed message list (+ the raw items, needed
     by tools like get_daily_board) for one agent turn. Shared by the streaming
     HTTP route and any non-HTTP caller (e.g. the Telegram bot)."""
@@ -425,7 +425,7 @@ def _build_agent_messages(user_id: str, history: list[dict]) -> tuple[list[dict]
     items, profile = fetch_items_with_status_and_profile(user_id, item_type="moving_task")
     context = (
         f"{system_prompt}\n\n"
-        f"תאריך היום: {date.today().isoformat()}\n\n"
+        f"תאריך היום: {date.today().isoformat()}\n"
         f"להלן המשימות הנוכחיות של המשתמש/ת לקראת המעבר (item_type#item_id לשימוש בכלים):\n"
         f"{_tasks_context(items)}\n\n"
         f"פרטי פרופיל המשתמש/ת: {_profile_context(profile)}"
@@ -444,7 +444,7 @@ def get_agent_reply(user_id: str, history: list[dict]) -> str:
     """
     if not settings.tasks_agent_openai_api_key:
         raise RuntimeError("מפתח ה-API של סוכן המשימות לא הוגדר בשרת.")
-    messages, items = _build_agent_messages(user_id, history)
+    messages, items = _build_agent_messages(user_id, history, source="telegram")
     client = OpenAI(api_key=settings.tasks_agent_openai_api_key)
     return "".join(_stream_reply(client, messages, user_id, items))
 

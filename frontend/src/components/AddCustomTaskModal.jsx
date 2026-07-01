@@ -148,7 +148,7 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
                 placeholder="לדוגמה: לעדכן כתובת במוסד חינוך"
-                className="w-full px-md py-2 rounded-xl border border-outline-variant font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                className="w-full px-md py-2 rounded border border-outline-variant font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
               />
             </div>
 
@@ -163,7 +163,7 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
                 <select
                   value={form.category}
                   onChange={(e) => set("category", e.target.value)}
-                  className="w-full px-md py-2 rounded-xl border border-outline-variant font-body-md text-body-md text-on-surface bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  className="w-full px-md py-2 rounded border border-outline-variant font-body-md text-body-md text-on-surface bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
@@ -180,7 +180,7 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
                     value={form.customCategory}
                     onChange={(e) => set("customCategory", e.target.value)}
                     placeholder="שם הקטגוריה…"
-                    className="mt-xs w-full px-md py-2 rounded-xl border border-primary font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                    className="mt-xs w-full px-md py-2 rounded border border-primary font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/20"
                   />
                 )}
               </div>
@@ -192,7 +192,7 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
                   {DEADLINE_OPTIONS.map((opt) => (
                     <label
                       key={opt.value}
-                      className={`flex items-center justify-center gap-xs px-sm py-2 rounded-xl border cursor-pointer transition-colors font-label-sm text-label-sm text-center ${
+                      className={`flex items-center justify-center gap-xs px-sm py-2 rounded border cursor-pointer transition-colors font-label-sm text-label-sm text-center ${
                         form.deadline_type === opt.value
                           ? "border-primary bg-primary-container/20 text-primary"
                           : "border-outline-variant text-on-surface-variant hover:border-primary/40"
@@ -217,7 +217,7 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
                     type="date"
                     value={form.deadline_date}
                     onChange={(e) => set("deadline_date", e.target.value)}
-                    className="mt-xs w-full px-md py-2 rounded-xl border border-outline-variant font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    className="mt-xs w-full px-md py-2 rounded border border-outline-variant font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
                   />
                 )}
               </div>
@@ -226,23 +226,21 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
             {/* Description — full width */}
             <div>
               <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                פרטים נוספים (אופציונלי)
-              </label>
+                פרטים נוספים              </label>
               <textarea
                 rows={2}
                 maxLength={1000}
                 value={form.description}
                 onChange={(e) => set("description", e.target.value)}
-                placeholder="הוסיפו פרטים, תזכורות, קישורים…"
-                className="w-full px-md py-2 rounded-xl border border-outline-variant font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+                placeholder="הוסיפו פרטים, תזכורות, הערות…"
+                className="w-full px-md py-2 rounded border border-outline-variant font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
               />
             </div>
 
             {/* Action steps — stacked, one row per step */}
             <div>
               <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                שלבי פעולה (אופציונלי)
-              </label>
+                שלבי פעולה              </label>
               <div className="space-y-xs">
                 {form.actionSteps.map((step, i) => (
                   <div key={i} className="flex items-center gap-xs">
@@ -280,8 +278,7 @@ export default function AddCustomTaskModal({ onClose, onTaskCreated }) {
             {/* Related links — stacked, one row per link */}
             <div>
               <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                קישורים (אופציונלי)
-              </label>
+                מקורות וקישורים              </label>
               <div className="space-y-xs">
                 {form.relatedLinks.map((link, i) => (
                   <div key={i} className="flex items-center gap-xs">
