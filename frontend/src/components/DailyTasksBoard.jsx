@@ -22,7 +22,7 @@ export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusC
         isDragOver ? "border-primary border-2 bg-primary-container/5" : "border-outline-variant/30"
       }`}
     >
-      <div className="flex items-center gap-sm mb-md">
+      <div className="flex items-center gap-sm mb-sm">
         <span className="material-symbols-outlined text-primary">event_note</span>
         <h2 className="font-headline-sm text-headline-sm text-on-surface flex-1 text-right">
           לוח יומי
@@ -43,6 +43,19 @@ export default function DailyTasksBoard({ tasks, pinnedKeys, onRemove, onStatusC
             </span>
           </button>
         )}
+      </div>
+
+      <div className="flex items-center gap-xs mb-md">
+        <div className="flex-1 border-t border-dashed border-outline-variant/40" />
+        <span className="font-label-sm text-label-sm text-on-surface-variant/70 shrink-0">
+          {(() => {
+            const d = new Date();
+            const day = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][d.getDay()];
+            const date = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+            return `${day}  •  ${date}`;
+          })()}
+        </span>
+        <div className="flex-1 border-t border-dashed border-outline-variant/40" />
       </div>
 
       {pinned.length === 0 ? (
