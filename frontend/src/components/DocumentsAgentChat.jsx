@@ -305,11 +305,8 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
                 key={conv.conversation_id}
                 type="button"
                 onClick={() => loadConversation(conv.conversation_id)}
-                className="w-full flex items-center justify-between gap-xs px-sm py-2.5 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow text-right"
+                className="w-full flex items-center justify-between gap-xs px-sm py-2.5 rounded bg-white border border-green-800 text-right"
               >
-                <span className="material-symbols-outlined text-gray-400 shrink-0" style={{ fontSize: "14px" }}>
-                  chevron_left
-                </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold text-green-800 truncate">
                     {conv.conversation_name || "שיחה ללא שם"}
@@ -320,6 +317,9 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
                     {conv.message_count} הודעות
                   </p>
                 </div>
+                <span className="material-symbols-outlined text-gray-400 shrink-0" style={{ fontSize: "14px" }}>
+                  chevron_left
+                </span>
               </button>
             ))}
           </div>
