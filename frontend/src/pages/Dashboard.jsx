@@ -125,7 +125,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onD
       )}
       {!compact && !pinned && (
         <span className="font-label-sm text-label-sm text-on-surface-variant">
-          {`${summary.completed} מתוך ${summary.total}`}
+          {`בוצעו ${summary.completed} מתוך ${summary.total}`}
         </span>
       )}
     </>
@@ -157,7 +157,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onD
             {summary.label}
           </span>
           <span className="font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">
-            {summary.completed} מתוך {summary.total} משימות
+            בוצעו {summary.completed} מתוך {summary.total} משימות
           </span>
         </div>
       </div>
@@ -361,7 +361,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
                 <span className="font-label-sm text-label-sm text-on-surface-variant/60 shrink-0">{label}</span>
                 <div className="flex-1 h-px bg-outline-variant/20" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start">
                 {items.map((item) => {
                   const id = `${item.item_type}:${item.item_id}`;
                   return (
@@ -396,7 +396,7 @@ function TasksSection({ tasks, onStatusChange, onDeadlineChange, savingId, onAdd
               onCollapse={() => fadeTransition(() => setExpandedCategory(null))}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md mt-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md items-start mt-lg">
             {catTasks.map((item) => {
               const id = `${item.item_type}:${item.item_id}`;
               return (

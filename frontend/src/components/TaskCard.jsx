@@ -253,12 +253,31 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
         e.dataTransfer.setDragImage(clone, e.clientX - rect.left, e.clientY - rect.top);
         requestAnimationFrame(() => clone.remove());
       }}
-      className={`group bg-white rounded-2xl border soft-shadow flex flex-col h-full transition-all duration-200 ${
+      className={`relative group bg-white rounded-2xl border soft-shadow flex flex-col h-full transition-all duration-200 ${
         done ? "border-primary/40" : "border-outline-variant/30"
       }`}
     >
-      {/* ── Header: drag handle · title · pin button ─────────────────── */}
-      <div className="p-md flex items-start gap-sm">
+      {onPin && (
+        <button
+          onClick={() => isPinned ? onUnpin(`${item.item_type}:${item.item_id}`) : onPin(item)}
+          className={`absolute top-2 left-2 w-6 h-6 flex items-center justify-center rounded-full border transition-all duration-150 z-10 ${
+            isPinned
+              ? "border-primary/40 text-primary bg-primary-container/20 hover:bg-error-container/30 hover:text-error hover:border-error/30"
+              : "border-outline-variant/50 text-on-surface-variant/60 hover:border-primary/60 hover:text-primary hover:bg-primary-container/10"
+          }`}
+          title={isPinned ? "הסר מלוח יומי" : "הוסף ללוח יומי"}
+        >
+          <span
+            className="material-symbols-outlined"
+            style={{ fontSize: "0.9rem", lineHeight: 1, fontVariationSettings: isPinned ? "'FILL' 1" : "'FILL' 0" }}
+          >
+            {isPinned ? "check" : "add"}
+          </span>
+        </button>
+      )}
+
+      {/* ── Header: drag handle · title ─────────────────── */}
+      <div className="pt-sm pr-xs pl-md pb-md flex items-start gap-sm">
         <span
           className="material-symbols-outlined text-on-surface-variant/20 group-hover:text-on-surface-variant/50 transition-colors shrink-0 mt-0.5 cursor-grab select-none"
           style={{ fontSize: "1rem" }}
@@ -267,35 +286,16 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
           drag_indicator
         </span>
 
-        <div className="flex flex-col gap-xs flex-1 text-right min-w-0">
+        <div className="flex flex-col gap-xs flex-1 text-right min-w-0 pl-7">
           {item.category_label && (
             <span className="font-label-sm text-label-sm text-on-surface-variant">
               {item.category_label}
             </span>
           )}
-          <h3 className={`font-headline-sm text-on-surface text-right leading-snug ${done ? "line-through opacity-50" : ""}`}>
+          <h3 className={`text-sm font-semibold text-on-surface text-right leading-snug ${done ? "line-through opacity-50" : ""}`}>
             {item.title_he || "ללא כותרת"}
           </h3>
         </div>
-
-        {onPin && (
-          <button
-            onClick={() => isPinned ? onUnpin(`${item.item_type}:${item.item_id}`) : onPin(item)}
-            className={`shrink-0 mt-xs w-6 h-6 flex items-center justify-center rounded-full border transition-all duration-150 ${
-              isPinned
-                ? "border-primary/40 text-primary bg-primary-container/20 hover:bg-error-container/30 hover:text-error hover:border-error/30"
-                : "border-outline-variant/50 text-on-surface-variant/60 hover:border-primary/60 hover:text-primary hover:bg-primary-container/10"
-            }`}
-            title={isPinned ? "הסר מלוח יומי" : "הוסף ללוח יומי"}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: "0.9rem", lineHeight: 1, fontVariationSettings: isPinned ? "'FILL' 1" : "'FILL' 0" }}
-            >
-              {isPinned ? "check" : "add"}
-            </span>
-          </button>
-        )}
       </div>
 
       {/* ── Footer: status · deadline · details ──────────────────────── */}
