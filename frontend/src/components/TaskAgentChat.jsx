@@ -40,22 +40,6 @@ function unwrapReply(text) {
   return text;
 }
 
-// Extract [SUGGEST_DAILY:{...}] from text and return { clean, suggestion }.
-// Returns { clean: originalText, suggestion: null } if no annotation found.
-function parseSuggestion(text) {
-  // Greedy (not lazy) — the payload is nested JSON ({"tasks":[{...}]}), so a
-  // lazy .*? stops at the first inner "}" and produces invalid JSON. Greedy
-  // is safe because the marker is always the last thing in the message.
-  const match = text.match(/\[SUGGEST_DAILY:(\{.*\})\]/s);
-  if (!match) return { clean: text, suggestion: null };
-  try {
-    const suggestion = JSON.parse(match[1]);
-    const clean = text.replace(match[0], "").trimEnd();
-    return { clean, suggestion };
-  } catch {
-    return { clean: text, suggestion: null };
-  }
-}
 
 export default function TaskAgentChat({ open, onClose }) {
   const [messages, setMessages] = useState([]);
@@ -68,7 +52,7 @@ export default function TaskAgentChat({ open, onClose }) {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [loadedConversationId, setLoadedConversationId] = useState(null);
-  const [pendingSuggestion, setPendingSuggestion] = useState(null);
+
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
   const textareaRef = useRef(null);
@@ -76,7 +60,7 @@ export default function TaskAgentChat({ open, onClose }) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: "end" });
-  }, [messages, sending, pendingSuggestion]);
+  }, [messages, sending]);
 
   useEffect(() => {
     if (!open) return;
@@ -100,14 +84,6 @@ export default function TaskAgentChat({ open, onClose }) {
 
   if (!open) return null;
 
-  function handleConfirmSuggestion() {
-    if (!pendingSuggestion) return;
-    window.dispatchEvent(
-      new CustomEvent("daily-board-pin", { detail: { tasks: pendingSuggestion.tasks } })
-    );
-    setPendingSuggestion(null);
-  }
-
   async function loadConversation(id) {
     try {
       const data = await api.getTaskAgentConversation(id);
@@ -126,7 +102,6 @@ export default function TaskAgentChat({ open, onClose }) {
     setMessages(nextMessages);
     setInput("");
     setFile(null);
-    setPendingSuggestion(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setSending(true);
     setMessages((prev) => [...prev, { role: "assistant", text: "" }]);
@@ -141,15 +116,11 @@ export default function TaskAgentChat({ open, onClose }) {
           });
         }
       );
-      // Stream finished — unwrap JSON reply format, then parse suggestion annotation.
+      // Stream finished — unwrap JSON reply format.
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last.role !== "assistant" || !last.text) return prev;
-        const { clean, suggestion } = parseSuggestion(unwrapReply(last.text));
-        if (suggestion) {
-          setPendingSuggestion(suggestion);
-          return [...prev.slice(0, -1), { ...last, text: clean }];
-        }
+        const clean = unwrapReply(last.text);
         if (clean !== last.text) return [...prev.slice(0, -1), { ...last, text: clean }];
         return prev;
       });
@@ -172,7 +143,6 @@ export default function TaskAgentChat({ open, onClose }) {
     const hasUserMessages = messages.some((m) => m.role === "user");
     if (!hasUserMessages) {
       setMessages([]);
-      setPendingSuggestion(null);
       onClose();
       return;
     }
@@ -187,7 +157,6 @@ export default function TaskAgentChat({ open, onClose }) {
       }
       setSaving(false);
       setMessages([]);
-      setPendingSuggestion(null);
       setLoadedConversationId(null);
       onClose();
     } catch (err) {
@@ -209,7 +178,6 @@ export default function TaskAgentChat({ open, onClose }) {
   function startNewConversation() {
     setMessages([]);
     setLoadedConversationId(null);
-    setPendingSuggestion(null);
     setView("chat");
   }
 
@@ -335,47 +303,19 @@ export default function TaskAgentChat({ open, onClose }) {
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
               const isTyping = sending && isLast && m.role === "assistant" && !m.text;
-              const showSuggestion = pendingSuggestion && isLast && m.role === "assistant" && !sending;
 
               return (
-                <div key={i}>
-                  <div className="flex">
-                    <div
-                      dir="rtl"
-                      className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed text-black text-right break-words ${
-                        m.role === "user"
-                          ? "bg-white border border-gray-300 mr-auto"
-                          : "bg-gray-100 ml-auto"
-                      }`}
-                    >
-                      {isTyping ? "…" : m.text}
-                    </div>
+                <div key={i} className="flex">
+                  <div
+                    dir="rtl"
+                    className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed text-black text-right break-words ${
+                      m.role === "user"
+                        ? "bg-white border border-gray-300 mr-auto"
+                        : "bg-gray-100 ml-auto"
+                    }`}
+                  >
+                    {isTyping ? "…" : m.text}
                   </div>
-
-                  {showSuggestion && (
-                    <div className="flex justify-end mt-xs">
-                      <div dir="rtl" className="bg-primary-container/20 border border-primary/25 rounded-2xl px-3 py-2 flex items-center gap-2 max-w-[80%]">
-                        <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: "1.1rem" }}>
-                          event_note
-                        </span>
-                        <span className="font-label-sm text-label-sm text-on-surface whitespace-nowrap flex-1">
-                          להוסיף ללוח היומי?
-                        </span>
-                        <button
-                          onClick={handleConfirmSuggestion}
-                          className="font-label-sm text-label-sm text-white bg-primary hover:bg-primary/90 transition-colors rounded-lg px-2 py-1 shrink-0"
-                        >
-                          כן, הוסף
-                        </button>
-                        <button
-                          onClick={() => setPendingSuggestion(null)}
-                          className="font-label-sm text-label-sm text-on-surface-variant hover:text-error transition-colors shrink-0"
-                        >
-                          לא
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}

@@ -35,11 +35,6 @@ _AGENT_ERROR = "מצטערים, הייתה שגיאה בפנייה לסוכן. �
 _MAX_HISTORY_MESSAGES = 30
 _TELEGRAM_MESSAGE_LIMIT = 4096
 
-# Greedy (not lazy) — the payload is nested JSON ({"tasks":[{...}]}), so a
-# lazy .*? stops at the first inner "}" and produces invalid JSON. Greedy is
-# safe because the marker is always the last thing in the message.
-_SUGGEST_DAILY_RE = re.compile(r"\[SUGGEST_DAILY:(\{.*\})\]", re.DOTALL)
-
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
 
 _bot_username_cache: str | None = None
@@ -148,21 +143,6 @@ def _unwrap_reply(text: str) -> str:
     return text
 
 
-def _strip_daily_suggestion(text: str) -> str:
-    """Drops the [SUGGEST_DAILY:{...}] marker the agent appends when it wants
-    to offer pinning tasks to the daily board — the in-app chat turns that
-    into a clickable confirm/decline button, which Telegram doesn't have
-    (v1), so the marker is just removed rather than acted on."""
-    match = _SUGGEST_DAILY_RE.search(text)
-    if not match:
-        return text
-    try:
-        json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return text
-    return (text[: match.start()] + text[match.end():]).rstrip()
-
-
 def _load_conversation(sb, user_id: str) -> list[dict]:
     # maybe_single().execute() returns None itself (not a response with
     # data=None) when zero rows match — guard both, not just .data.
@@ -229,7 +209,7 @@ def _handle_agent_message(sb, chat_id, text: str) -> None:
         send_message(chat_id, _AGENT_ERROR)
         return
 
-    reply = _strip_daily_suggestion(_unwrap_reply(raw_reply))
+    reply = _unwrap_reply(raw_reply)
     send_message(chat_id, reply)
     history.append({"role": "assistant", "content": reply})
     _save_conversation(sb, user_id, history)

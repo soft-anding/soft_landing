@@ -423,14 +423,9 @@ def _build_agent_messages(user_id: str, history: list[dict], *, source: str = "a
     # the profile first and everything else after) — shaves the pre-stream
     # delay down to roughly the slowest single query instead of two stages.
     items, profile = fetch_items_with_status_and_profile(user_id, item_type="moving_task")
-    telegram_note = (
-        "\nערוץ תקשורת: טלגרם — אין לכלול את שורת [SUGGEST_DAILY:...] בשום תשובה.\n"
-        if source == "telegram" else ""
-    )
     context = (
         f"{system_prompt}\n\n"
         f"תאריך היום: {date.today().isoformat()}\n"
-        f"{telegram_note}\n"
         f"להלן המשימות הנוכחיות של המשתמש/ת לקראת המעבר (item_type#item_id לשימוש בכלים):\n"
         f"{_tasks_context(items)}\n\n"
         f"פרטי פרופיל המשתמש/ת: {_profile_context(profile)}"
