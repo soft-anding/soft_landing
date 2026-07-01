@@ -299,19 +299,22 @@ export default function TaskCard({ item, onStatusChange, onDeadlineChange, savin
       </div>
 
       {/* ── Footer: status · deadline · details ──────────────────────── */}
-      <div className="flex items-center gap-sm px-md pb-md mt-auto flex-wrap">
-        <StatusPicker item={item} onStatusChange={onStatusChange} saving={saving} />
-        <DeadlinePicker item={item} onDeadlineChange={onDeadlineChange} saving={saving} />
-        <div className="flex-1" />
-        <button
-          onClick={() => setExpanded((e) => !e)}
-          className="flex items-center gap-xs font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors shrink-0"
-        >
-          <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
-          <span className="material-symbols-outlined text-sm">
-            {expanded ? "close" : "chevron_left"}
-          </span>
-        </button>
+      <div className="flex flex-col gap-sm px-md pb-md mt-auto">
+        <div className="flex justify-start">
+          <StatusPicker item={item} onStatusChange={onStatusChange} saving={saving} />
+        </div>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setExpanded((e) => !e)}
+            className="flex items-center gap-xs font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors shrink-0"
+          >
+            <span className="material-symbols-outlined text-sm">
+              {expanded ? "close" : "chevron_left"}
+            </span>
+            <span>{expanded ? "סגור" : "פרטים נוספים"}</span>
+          </button>
+          <DeadlinePicker item={item} onDeadlineChange={onDeadlineChange} saving={saving} />
+        </div>
       </div>
 
       {/* ── Details drawer ────────────────────────────────────────────── */}

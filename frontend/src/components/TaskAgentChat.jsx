@@ -298,19 +298,19 @@ export default function TaskAgentChat({ open, onClose }) {
                 key={conv.conversation_id}
                 type="button"
                 onClick={() => loadConversation(conv.conversation_id)}
-                className="w-full flex items-center justify-between gap-xs px-sm py-2.5 rounded bg-white border border-green-800 text-right"
+                className="w-full flex items-center justify-between gap-xs px-sm py-1.5 rounded bg-white border border-green-800/30 text-right"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-green-800 truncate">
+                  <p className="text-[11px] font-medium text-green-900 truncate">
                     {conv.conversation_name || "שיחה ללא שם"}
                   </p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">
+                  <p className="text-[9px] text-gray-400 mt-0.5">
                     {new Date(conv.created_at).toLocaleDateString("he-IL")}
                     {" · "}
                     {conv.message_count} הודעות
                   </p>
                 </div>
-                <span className="material-symbols-outlined text-gray-400 shrink-0" style={{ fontSize: "14px" }}>
+                <span className="material-symbols-outlined text-gray-300 shrink-0" style={{ fontSize: "12px" }}>
                   chevron_left
                 </span>
               </button>

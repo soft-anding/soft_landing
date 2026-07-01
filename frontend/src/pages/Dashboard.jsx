@@ -76,7 +76,7 @@ function DonutChart({ percentage, size = 68 }) {
 // When `compact` is true the box shrinks for the "other categories" row in State 2.
 function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onDragStart }) {
   const pinned = !!onCollapse;
-  const chartSize = compact ? 56 : pinned ? 112 : 52;
+  const chartSize = compact ? 72 : pinned ? 112 : 52;
   const pct = summary.percentage;
 
   const inner = (
@@ -95,7 +95,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onD
         )}
         <span
           className={`text-on-surface leading-snug ${
-            compact ? "font-label-sm text-label-sm" : pinned ? "font-headline-sm text-headline-sm" : "font-label-md text-label-md"
+            compact ? "font-label-md text-label-md" : pinned ? "font-headline-sm text-headline-sm" : "font-label-md text-label-md"
           }`}
         >
           {summary.label}
@@ -105,7 +105,7 @@ function CategorySummaryBox({ summary, onClick, onCollapse, compact = false, onD
         <DonutChart percentage={pct} size={chartSize} />
         <span
           className="absolute inset-0 flex items-center justify-center font-semibold text-primary"
-          style={{ fontSize: compact ? "0.85rem" : pinned ? "1.5rem" : "0.72rem" }}
+          style={{ fontSize: compact ? "1rem" : pinned ? "1.5rem" : "0.72rem" }}
         >
           {pct}%
         </span>
