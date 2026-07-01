@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "../components/AppHeader";
 import AddCustomTaskModal from "../components/AddCustomTaskModal";
 import DailyTasksBoard from "../components/DailyTasksBoard";
@@ -498,6 +498,28 @@ export default function Dashboard() {
   const [showAddTask,  setShowAddTask]  = useState(false);
   const [boardMinimized, setBoardMinimized] = useState(false);
 
+  // Pin the daily board's height to the right column's initial (overview) height so
+  // it never grows with the pinned list — it scrolls internally instead. Measured
+  // once on mount and locked in, so clicking into a category (which can change the
+  // right column's height) doesn't resize the board.
+  const [boardHeight, setBoardHeight] = useState(null);
+  const boardObserverRef = useRef(null);
+  const setRightColRef = useCallback((node) => {
+    if (boardObserverRef.current) {
+      boardObserverRef.current.disconnect();
+      boardObserverRef.current = null;
+    }
+    if (node) {
+      const observer = new ResizeObserver(([entry]) => {
+        setBoardHeight(entry.contentRect.height);
+        observer.disconnect();
+        boardObserverRef.current = null;
+      });
+      observer.observe(node);
+      boardObserverRef.current = observer;
+    }
+  }, []);
+
   // Ordered array of "item_type:item_id" strings — source of truth for the daily board.
   // Order matches the `position` column in user_daily_board (agent-suggested order preserved).
   // Seeded from the cache AppHeader prefetches on every authenticated page, so the board
@@ -741,9 +763,9 @@ export default function Dashboard() {
               byStatus={progress?.by_status ?? {}}
             />
 
-            <div className="flex gap-lg items-stretch mt-8">
+            <div className="flex gap-lg items-start mt-8">
               {/* Right column — main content */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0" ref={setRightColRef}>
                 <section>
                   <div className="mb-sm">
                     <h2 className="font-headline-md text-headline-md text-on-surface">
@@ -787,7 +809,10 @@ export default function Dashboard() {
                   </span>
                 </button>
               ) : (
-                <div className="w-72 shrink-0 mt-sm">
+                <div
+                  className="w-72 shrink-0 mt-sm"
+                  style={boardHeight ? { height: boardHeight } : undefined}
+                >
                   <DailyTasksBoard
                     tasks={tasks}
                     pinnedKeys={pinnedKeys}

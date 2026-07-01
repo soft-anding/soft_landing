@@ -4,10 +4,16 @@ import { useEffect, useRef } from "react";
 // accordion so long detail content doesn't push the page layout down.
 export default function SideDrawer({ open, onClose, title, side = "right", children }) {
   const scrollRef = useRef(null);
+  // Keep the latest onClose without putting it in the effect's deps — onClose is a
+  // fresh inline function on every parent re-render (e.g. after a save updates the
+  // profile), and depending on it directly re-ran the effect below on every such
+  // render, resetting the scroll position each time.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
-    const onKeyDown = (e) => { if (e.key === "Escape") onClose(); };
+    const onKeyDown = (e) => { if (e.key === "Escape") onCloseRef.current(); };
     document.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -15,7 +21,7 @@ export default function SideDrawer({ open, onClose, title, side = "right", child
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
     };
-  }, [open, onClose]);
+  }, [open]);
 
   const sideCls    = side === "right" ? "right-0" : "left-0";
   const closedCls  = side === "right" ? "translate-x-full" : "-translate-x-full";
