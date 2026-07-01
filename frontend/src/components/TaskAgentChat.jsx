@@ -356,24 +356,24 @@ export default function TaskAgentChat({ open, onClose }) {
 
                   {showSuggestion && (
                     <div className="flex justify-end mt-xs">
-                      <div className="bg-primary-container/20 border border-primary/25 rounded-xl px-sm py-sm flex items-center gap-sm max-w-[80%]">
+                      <div dir="rtl" className="bg-primary-container/20 border border-primary/25 rounded-2xl px-3 py-2 flex items-center gap-2 max-w-[80%]">
                         <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: "1.1rem" }}>
                           event_note
                         </span>
-                        <span className="font-label-sm text-label-sm text-on-surface flex-1">
+                        <span className="font-label-sm text-label-sm text-on-surface whitespace-nowrap flex-1">
                           להוסיף ללוח היומי?
                         </span>
+                        <button
+                          onClick={handleConfirmSuggestion}
+                          className="font-label-sm text-label-sm text-white bg-primary hover:bg-primary/90 transition-colors rounded-lg px-2 py-1 shrink-0"
+                        >
+                          כן, הוסף
+                        </button>
                         <button
                           onClick={() => setPendingSuggestion(null)}
                           className="font-label-sm text-label-sm text-on-surface-variant hover:text-error transition-colors shrink-0"
                         >
                           לא
-                        </button>
-                        <button
-                          onClick={handleConfirmSuggestion}
-                          className="font-label-sm text-label-sm text-white bg-primary hover:bg-primary/90 transition-colors rounded-lg px-sm py-xs shrink-0"
-                        >
-                          כן, הוסף
                         </button>
                       </div>
                     </div>
