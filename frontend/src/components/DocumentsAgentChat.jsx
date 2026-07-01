@@ -222,24 +222,22 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
       className="fixed bottom-6 left-6 z-[60] w-[340px] h-[480px] bg-white rounded-2xl soft-shadow border border-outline-variant/30 flex flex-col overflow-hidden"
     >
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-md py-sm border-b border-outline-variant/30 shrink-0">
-        <div className="flex items-center gap-xs min-w-0">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="סגור"
-            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
-          >
-            <span className="material-symbols-outlined text-base">close</span>
-          </button>
-          <div className="min-w-0">
-            <h3 className="font-label-md text-label-md font-bold text-on-surface leading-tight truncate">
-              עוזר המסמכים
-            </h3>
-            <p className="text-on-surface-variant truncate" style={{ fontSize: "10px" }}>
-              {category ? `קטגוריה: ${category}` : "שאלות על טפסים ומסמכים"}
-            </p>
-          </div>
+      <div className="relative flex items-center justify-between px-md py-sm border-b border-outline-variant/30 shrink-0">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="סגור"
+          className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-outline-variant/20 transition-colors"
+        >
+          <span className="material-symbols-outlined text-base">close</span>
+        </button>
+        <div className="min-w-0 pr-4">
+          <h3 className="font-label-md text-label-md font-bold text-on-surface leading-tight truncate">
+            עוזר המסמכים
+          </h3>
+          <p className="text-on-surface-variant truncate" style={{ fontSize: "10px" }}>
+            {category ? `קטגוריה: ${category}` : "שאלות על טפסים ומסמכים"}
+          </p>
         </div>
 
         {saveError ? (
@@ -297,6 +295,7 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
       {view === "history" && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-md py-sm space-y-xs">
+            <p className="text-[10px] text-on-surface-variant font-medium mb-xs text-right">השיחות שלך</p>
             {historyLoading && <p className="text-xs text-on-surface-variant text-center py-md">טוען...</p>}
             {!historyLoading && history.length === 0 && (
               <p className="text-xs text-on-surface-variant text-center py-md">אין שיחות שמורות עדיין</p>
@@ -306,21 +305,21 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
                 key={conv.conversation_id}
                 type="button"
                 onClick={() => loadConversation(conv.conversation_id)}
-                className="w-full flex items-center justify-between gap-xs px-sm py-1.5 rounded-[7px] border border-outline-variant/60 bg-surface-container/40 hover:bg-surface-container transition-colors text-right"
+                className="w-full flex items-center justify-between gap-xs px-sm py-2.5 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow text-right"
               >
+                <span className="material-symbols-outlined text-gray-400 shrink-0" style={{ fontSize: "14px" }}>
+                  chevron_left
+                </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-on-surface truncate">
+                  <p className="text-xs font-semibold text-green-800 truncate">
                     {conv.conversation_name || "שיחה ללא שם"}
                   </p>
-                  <p className="text-[10px] text-on-surface-variant mt-0.5">
+                  <p className="text-[10px] text-gray-400 mt-0.5">
                     {new Date(conv.created_at).toLocaleDateString("he-IL")}
                     {" · "}
                     {conv.message_count} הודעות
                   </p>
                 </div>
-                <span className="material-symbols-outlined text-on-surface-variant shrink-0" style={{ fontSize: "14px" }}>
-                  chevron_left
-                </span>
               </button>
             ))}
           </div>
@@ -328,9 +327,8 @@ export default function DocumentsAgentChat({ open, onClose, category, forms }) {
             <button
               type="button"
               onClick={startNewConversation}
-              className="w-full flex items-center justify-center gap-xs py-1.5 rounded-xl border border-outline-variant/40 text-xs text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+              className="w-full flex items-center justify-center py-2 rounded-xl bg-green-800 text-white text-xs font-medium hover:bg-green-900 transition-colors"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>add</span>
               שיחה חדשה
             </button>
           </div>
