@@ -50,7 +50,7 @@ export default function TaskAgentChat({ open, onClose }) {
   const [saveError, setSaveError] = useState(null);
   const [view, setView] = useState("chat"); // "chat" | "history"
   const [history, setHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyFetching, setHistoryFetching] = useState(false);
   const [loadedConversationId, setLoadedConversationId] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -165,14 +165,18 @@ export default function TaskAgentChat({ open, onClose }) {
     }
   }
 
-  function switchToHistory() {
-    if (view === "history") return;
+  async function switchToHistory() {
+    if (view === "history" || historyFetching) return;
+    setHistoryFetching(true);
+    try {
+      const data = await api.getTaskAgentConversations();
+      setHistory(data);
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryFetching(false);
+    }
     setView("history");
-    setHistoryLoading(true);
-    api.getTaskAgentConversations()
-      .then((data) => setHistory(data))
-      .catch(() => setHistory([]))
-      .finally(() => setHistoryLoading(false));
   }
 
   function startNewConversation() {
@@ -242,13 +246,14 @@ export default function TaskAgentChat({ open, onClose }) {
         <button
           type="button"
           onClick={switchToHistory}
-          className={`flex-1 py-2 text-xs font-medium border-b-2 transition-colors ${
+          disabled={historyFetching}
+          className={`flex-1 py-2 text-xs font-medium border-b-2 transition-all ${
             view === "history"
               ? "border-primary text-primary"
               : "border-transparent text-on-surface-variant hover:text-on-surface"
-          }`}
+          } ${historyFetching ? "opacity-50" : ""}`}
         >
-          שיחות קודמות
+          {historyFetching ? "טוען…" : "שיחות קודמות"}
         </button>
       </div>
 
@@ -257,8 +262,7 @@ export default function TaskAgentChat({ open, onClose }) {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-md py-sm space-y-xs">
             <p className="text-[10px] text-on-surface-variant font-medium mb-xs text-right">השיחות שלך</p>
-            {historyLoading && <p className="text-xs text-on-surface-variant text-center py-md">טוען...</p>}
-            {!historyLoading && history.length === 0 && (
+            {history.length === 0 && (
               <p className="text-xs text-on-surface-variant text-center py-md">אין שיחות שמורות עדיין</p>
             )}
             {history.map((conv) => (
@@ -269,11 +273,11 @@ export default function TaskAgentChat({ open, onClose }) {
                 className="w-full flex items-center justify-between gap-xs px-sm py-1.5 rounded bg-white border border-green-800/30 text-right"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium text-green-900 truncate">
+                  <p className="text-xs font-semibold text-green-900 truncate">
                     {conv.conversation_name || "שיחה ללא שם"}
                   </p>
                   <p className="text-[9px] text-gray-400 mt-0.5">
-                    {new Date(conv.created_at).toLocaleDateString("he-IL")}
+                    {(() => { const d = new Date(conv.created_at); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`; })()}
                     {" · "}
                     {conv.message_count} הודעות
                   </p>
