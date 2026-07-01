@@ -741,10 +741,10 @@ export default function Dashboard() {
               byStatus={progress?.by_status ?? {}}
             />
 
-            <div className="flex gap-lg items-start mt-8">
+            <div className="flex gap-lg items-stretch mt-8">
               {/* Right column — main content */}
               <div className="flex-1 min-w-0">
-                <section className="mb-xl">
+                <section>
                   <div className="mb-sm">
                     <h2 className="font-headline-md text-headline-md text-on-surface">
                       משימות לקראת המעבר
@@ -787,7 +787,7 @@ export default function Dashboard() {
                   </span>
                 </button>
               ) : (
-                <div className="w-72 shrink-0 h-[544px] mt-sm">
+                <div className="w-72 shrink-0 mt-sm">
                   <DailyTasksBoard
                     tasks={tasks}
                     pinnedKeys={pinnedKeys}
