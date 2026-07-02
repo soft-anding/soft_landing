@@ -164,9 +164,9 @@ export default function ItemDetail() {
         )}
 
         {item && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-md items-start">
+          <div className="flex flex-col lg:flex-row gap-md lg:sticky lg:top-28 lg:h-[calc(100vh-8rem)]">
             {/* Main content */}
-            <div className="lg:col-span-2 bg-white rounded-2xl p-lg shadow-sm soft-shadow text-right lg:sticky lg:top-28">
+            <div className="lg:w-2/3 bg-white rounded-2xl p-lg shadow-sm soft-shadow text-right lg:h-full lg:overflow-y-auto">
               <span className="text-label-sm px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
                 {item.item_type === "rights_item" ? "זכות / הטבה" : "משימה"} · {item.category_label}
               </span>
@@ -318,7 +318,7 @@ export default function ItemDetail() {
             </div>
 
             {/* Tracking panel */}
-            <aside className="bg-white rounded-2xl p-lg shadow-sm soft-shadow text-right lg:sticky lg:top-28">
+            <aside className="lg:w-1/3 bg-white rounded-2xl p-lg shadow-sm soft-shadow text-right lg:h-full lg:overflow-y-auto">
               <h2 className="font-headline-md text-headline-md text-on-surface mb-md">המעקב שלי</h2>
 
               <label className="block font-label-md text-on-surface-variant mb-xs">סטטוס</label>
